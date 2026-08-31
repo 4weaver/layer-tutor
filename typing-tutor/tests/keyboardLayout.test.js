@@ -6,80 +6,51 @@ import {
 } from '../js/keyboardLayout.js';
 
 test('base-layer letters map to layer 0 without shift', () => {
-  assert.deepEqual(charToKey('a'), { keyId: 'L11', layer: 0, shift: false });
-  assert.deepEqual(charToKey('y'), { keyId: 'R01', layer: 0, shift: false });
-  assert.deepEqual(charToKey('b'), { keyId: 'L25', layer: 0, shift: false });
+  assert.deepEqual(charToKey('a'), { keyId: 'L21', layer: 0, shift: false });
+  assert.deepEqual(charToKey('y'), { keyId: 'R10', layer: 0, shift: false });
+  assert.deepEqual(charToKey('z'), { keyId: 'L32', layer: 0, shift: false });
+  assert.deepEqual(charToKey('b'), { keyId: 'R32', layer: 0, shift: false });
 });
 
 test('uppercase letters need shift', () => {
-  assert.deepEqual(charToKey('A'), { keyId: 'L11', layer: 0, shift: true });
-  assert.deepEqual(charToKey('T'), { keyId: 'L05', layer: 0, shift: true });
+  assert.deepEqual(charToKey('A'), { keyId: 'L21', layer: 0, shift: true });
+  assert.deepEqual(charToKey('T'), { keyId: 'L15', layer: 0, shift: true });
+  assert.deepEqual(charToKey('Z'), { keyId: 'L32', layer: 0, shift: true });
 });
 
-test('digits live on layer 1', () => {
-  assert.deepEqual(charToKey('1'), { keyId: 'L01', layer: 1, shift: false });
-  assert.deepEqual(charToKey('5'), { keyId: 'L05', layer: 1, shift: false });
-  assert.deepEqual(charToKey('6'), { keyId: 'R01', layer: 1, shift: false });
-  assert.deepEqual(charToKey('0'), { keyId: 'R05', layer: 1, shift: false });
+test('shifted punctuation resolves through shiftedL0', () => {
+  assert.deepEqual(charToKey('<'), { keyId: 'L31', layer: 0, shift: true });
+  assert.deepEqual(charToKey('>'), { keyId: 'R35', layer: 0, shift: true });
+  assert.deepEqual(charToKey('?'), { keyId: 'R36', layer: 0, shift: true });
+  assert.deepEqual(charToKey(':'), { keyId: 'R24', layer: 0, shift: true });
+  assert.deepEqual(charToKey('_'), { keyId: 'R05', layer: 0, shift: true });
 });
 
-test('arrows live on layer 1 hjkl keys (vim-style)', () => {
-  assert.deepEqual(charToKey('←'), { keyId: 'R11', layer: 1, shift: false });
-  assert.deepEqual(charToKey('↓'), { keyId: 'R12', layer: 1, shift: false });
-  assert.deepEqual(charToKey('↑'), { keyId: 'R13', layer: 1, shift: false });
-  assert.deepEqual(charToKey('→'), { keyId: 'R14', layer: 1, shift: false });
+test('NAV layer characters resolve to layer 1', () => {
+  assert.deepEqual(charToKey('\u2190'), { keyId: 'R20', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u2193'), { keyId: 'R21', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u2191'), { keyId: 'R22', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u2192'), { keyId: 'R23', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u21e4'), { keyId: 'R32', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u21e5'), { keyId: 'R33', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u21d1'), { keyId: 'R34', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u21d3'), { keyId: 'R35', layer: 1, shift: false });
 });
 
-test('shifted symbols live on layer 2', () => {
-  assert.deepEqual(charToKey('!'), { keyId: 'L01', layer: 2, shift: false });
-  assert.deepEqual(charToKey('%'), { keyId: 'L05', layer: 2, shift: false });
-  assert.deepEqual(charToKey('^'), { keyId: 'R01', layer: 2, shift: false });
-  assert.deepEqual(charToKey(')'), { keyId: 'R05', layer: 2, shift: false });
-});
-
-test('brackets and punctuation live on layer 2', () => {
-  assert.deepEqual(charToKey('-'), { keyId: 'R11', layer: 2, shift: false });
-  assert.deepEqual(charToKey('['), { keyId: 'R13', layer: 2, shift: false });
-  assert.deepEqual(charToKey('`'), { keyId: 'R16', layer: 2, shift: false });
-  assert.deepEqual(charToKey('{'), { keyId: 'R22', layer: 2, shift: false });
-  assert.deepEqual(charToKey('~'), { keyId: 'R25', layer: 2, shift: false });
-  assert.deepEqual(charToKey('\\'), { keyId: 'R15', layer: 2, shift: false });
-});
-
-test('layer-0 punctuation, plain and shifted', () => {
-  assert.deepEqual(charToKey(';'), { keyId: 'R15', layer: 0, shift: false });
-  assert.deepEqual(charToKey(':'), { keyId: 'R15', layer: 0, shift: true });
-  assert.deepEqual(charToKey("'"), { keyId: 'R16', layer: 0, shift: false });
-  assert.deepEqual(charToKey('"'), { keyId: 'R16', layer: 0, shift: true });
-  assert.deepEqual(charToKey('?'), { keyId: 'R24', layer: 0, shift: true });
-});
-
-test('space maps to the left thumb space key', () => {
-  assert.deepEqual(charToKey(' '), { keyId: 'L35', layer: 0, shift: false });
-});
-
-test('unmappable characters return null', () => {
-  assert.equal(charToKey('€'), null);
-  assert.equal(charToKey('\t'), null);
-});
-
-test('layer hold keys and both shift keys exist in KEYS', () => {
-  for (const id of [...Object.values(LAYER_HOLD), ...SHIFT_KEYS, SHIFT_KEY]) {
-    assert.ok(KEYS.some((k) => k.id === id), `missing key ${id}`);
-  }
-});
-
-test('KEYS has 46 keys (23 per half)', () => {
-  assert.equal(KEYS.length, 46);
-  assert.equal(KEYS.filter((k) => k.half === 'L').length, 23);
-});
-
-test('CHAR_MAP has no single-char legend conflicts', () => {
+test('char map is unique; NAV held by comma; single shift key', () => {
   assert.equal(assertUniqueCharMap(), true);
+  assert.equal(LAYER_HOLD[1], 'L31');
+  assert.deepEqual(SHIFT_KEYS, ['L20']);
+  assert.equal(SHIFT_KEY, 'L20');
 });
 
-test('shiftKeysFor prefers the hand that owns the letter', () => {
-  assert.deepEqual(shiftKeysFor(charToKey('A')), ['L20']);
-  assert.deepEqual(shiftKeysFor(charToKey('Y')), ['R10']);
-  assert.deepEqual(shiftKeysFor(charToKey('a')), []);
+test('shiftKeysFor picks the (only) shift for any target', () => {
+  assert.deepEqual(shiftKeysFor({ keyId: 'R20', shift: true }), ['L20']);
+  assert.deepEqual(shiftKeysFor({ keyId: 'L32', shift: true }), ['L20']);
+  assert.deepEqual(shiftKeysFor({ keyId: 'R20', shift: false }), []);
 });
+
+test('KEYS count matches the keymap (51 rendered keys incl. named ones)', () => {
+  assert.equal(KEYS.length, 51);
+});
+

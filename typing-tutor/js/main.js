@@ -40,6 +40,7 @@ let onboardSeq = ['a', ' ', 's', 'd', 'f'];
 let onboardIdx = 0;
 
 const ARROWS = { ArrowLeft: '←', ArrowDown: '↓', ArrowUp: '↑', ArrowRight: '→' };
+const NAV_KEYS = { Home: '⇤', End: '⇥', PageUp: '⇑', PageDown: '⇓' };  // NAV paging on B N M . (hold comma)
 
 sound.initSound(progress.settings?.soundEnabled !== false);
 
@@ -244,7 +245,7 @@ function refresh() {
   const target = activeBoard.charToKey(ch);
   kb?.highlightTarget(target);
   applyBoardChrome(target);
-  ui.setContextTip(contextualTip(ch, (c) => activeBoard.charToKey(c), stage?.coachTip));
+  ui.setContextTip(contextualTip(ch, (c) => activeBoard.charToKey(c), stage?.coachTip, activeBoard));
   const { frac } = progressCounts(game);
   ui.renderProgressBar(frac);
   const label = `${game.itemIndex + 1}/${game.items.length}`;
@@ -401,6 +402,7 @@ function sandboxType(ch) {
         nextCh,
         (c) => activeBoard.charToKey(c),
         'Type freely — green key follows.',
+        activeBoard,
       );
     }
     return;
@@ -411,7 +413,7 @@ function sandboxType(ch) {
   if (t) signalFromKey(sandboxKb?.getKeyRect(t.keyId), t.layer);
   sandboxKb?.highlightTarget(t);
   const tip = document.getElementById('sandbox-tip');
-  if (tip) tip.textContent = contextualTip(ch, (c) => activeBoard.charToKey(c), '');
+  if (tip) tip.textContent = contextualTip(ch, (c) => activeBoard.charToKey(c), '', activeBoard);
   sound.playCorrect();
 }
 
@@ -474,6 +476,7 @@ function finishOnboarding() {
 // ---- Input ----
 function keyToChar(e) {
   if (ARROWS[e.key]) return ARROWS[e.key];
+  if (NAV_KEYS[e.key]) return NAV_KEYS[e.key];
   if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') return ' ';
   if (e.key.length === 1) return e.key;
   return null;
@@ -493,7 +496,7 @@ function isOnboardScreen() {
   return !document.getElementById('screen-onboarding')?.classList.contains('hidden');
 }
 
-// Esc is a base-layer key on the Corne (L00, next to Q) — stray hits are common,
+// Esc is a base-layer key on this Lily58 (L00, top-left) — stray hits are common,
 // so pausing requires a deliberate double-tap; a single Esc always resumes.
 const ESC_DOUBLE_TAP_MS = 400;
 let lastEscAt = 0;

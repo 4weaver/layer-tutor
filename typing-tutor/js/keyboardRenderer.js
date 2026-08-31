@@ -1,67 +1,36 @@
 // Renders the split-keyboard diagram and highlights the current target.
 //
-// Layout is geometry-driven to mirror the physical board: every key has an
-// explicit position/size/rotation in key-pitch units ("u"), and the case is
-// one continuous SVG outline that steps with the column stagger and wraps
-// the fanned thumb cluster. The right half is a mirror of the left.
-//
-// State is closed over per mount (no module-global key map).
+// Geometry comes from the board's own `positions` map (key id -> {x,y,w,h,r}
+// in key-pitch units), generated for the real ZMK keymap by
+// zmk-config/trainer/tools/gen_board.py. The case outline is computed from
+// the key extents, so any board shape renders without hand-tuned outlines.
 
 import { PRIMARY_BOARD } from './keyboardLayout.js';
 
 const U = 3.55;
 const KEY_GAP = 0.35;
-const CO = [0.55, 0.40, 0.12, 0, 0.15, 0.28, 0.65];
-const PAD = 0.30;
+const PAD = 0.40;
 
-const THUMB_GEOM_L = {
-  L33: { x: 3.45, y: 3.30, w: 1, h: 1, r: 6 },
-  L34: { x: 4.58, y: 3.46, w: 1, h: 1, r: 14 },
-  L35: { x: 5.75, y: 2.85, w: 1, h: 1.85, r: 22 },
-};
-const THUMB_MIRROR = { R33: 'L35', R34: 'L34', R35: 'L33' };
-
-function visualColOf(key) {
-  if (key.half === 'R' && key.row === 2) return key.col + 1;
-  return key.col;
+function geomFor(key, board) {
+  const p = board.positions?.[key.id];
+  if (p) return { x: p.x, y: p.y, w: p.w ?? 1, h: p.h ?? 1, r: p.r ?? 0 };
+  return { x: key.col ?? 0, y: key.row ?? 0, w: 1, h: 1, r: 0 };
 }
 
-function geomFor(key) {
-  if (key.row === 3) {
-    const left = THUMB_GEOM_L[key.id] ?? THUMB_GEOM_L[THUMB_MIRROR[key.id]];
-    if (key.half === 'L') return left;
-    return { x: 7 - left.x - left.w, y: left.y, w: left.w, h: left.h, r: -left.r };
+function halfExtents(keys, board, half) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const key of keys.filter((k) => k.half === half)) {
+    const g = geomFor(key, board);
+    minX = Math.min(minX, g.x);
+    minY = Math.min(minY, g.y);
+    maxX = Math.max(maxX, g.x + g.w);
+    maxY = Math.max(maxY, g.y + g.h);
   }
-  const vc = visualColOf(key);
-  const off = key.half === 'L' ? CO[vc] : CO[6 - vc];
-  return { x: vc, y: off + key.row, w: 1, h: 1, r: 0 };
+  if (!Number.isFinite(minX)) {
+    return { minX: -PAD, minY: -PAD, maxX: 6 + PAD, maxY: 4 + PAD };
+  }
+  return { minX, minY, maxX, maxY };
 }
-
-const CASE_L = [
-  [-PAD, CO[0] - PAD],
-  [1, CO[0] - PAD], [1, CO[1] - PAD],
-  [2, CO[1] - PAD], [2, CO[2] - PAD],
-  [3, CO[2] - PAD], [3, CO[3] - PAD],
-  [4, CO[3] - PAD], [4, CO[4] - PAD],
-  [5, CO[4] - PAD], [5, CO[5] - PAD],
-  [6, CO[5] - PAD], [6, CO[6] - PAD],
-  [7 + PAD, CO[6] - PAD],
-  [7 + PAD, 3.85],
-  [6.25, 5.30],
-  [3.45, 4.88],
-  [3.15, 4.58],
-  [3.15, CO[2] + 3 + PAD],
-  [2, CO[2] + 3 + PAD], [2, CO[1] + 3 + PAD],
-  [1, CO[1] + 3 + PAD], [1, CO[0] + 3 + PAD],
-  [-PAD, CO[0] + 3 + PAD],
-];
-
-const MIN_Y = CO[3] - PAD;
-const MAX_Y = 5.35;
-const MIN_X = -PAD;
-const MAX_X = 7 + PAD;
-const WIDTH_U = MAX_X - MIN_X;
-const HEIGHT_U = MAX_Y - MIN_Y;
 
 function roundedPath(pts, radius) {
   const n = pts.length;
@@ -78,37 +47,42 @@ function roundedPath(pts, radius) {
     const r2 = Math.min(radius, l2 / 2);
     const a = [p1[0] - (v1[0] / l1) * r1, p1[1] - (v1[1] / l1) * r1];
     const b = [p1[0] + (v2[0] / l2) * r2, p1[1] + (v2[1] / l2) * r2];
-    d += `${i === 0 ? 'M' : 'L'} ${a[0].toFixed(1)} ${a[1].toFixed(1)} `;
-    d += `Q ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)} `;
+    d += (i === 0 ? 'M' : 'L') + ' ' + a[0].toFixed(1) + ' ' + a[1].toFixed(1) + ' ';
+    d += 'Q ' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1) + ' ' + b[0].toFixed(1) + ' ' + b[1].toFixed(1) + ' ';
   }
-  return `${d}Z`;
+  return d + 'Z';
 }
 
-function caseSvg(half) {
-  const pts = CASE_L.map(([x, y]) => {
-    const px = half === 'L' ? x : 7 - x;
-    return [(px - MIN_X) * 100, (y - MIN_Y) * 100];
-  });
-  const gradId = `kb-case-grad-${half}`;
+function caseSvg(half, ex) {
+  const W = ex.maxX - ex.minX;
+  const H = ex.maxY - ex.minY;
+  const pad = PAD;
+  const pts = [
+    [ex.minX - pad, ex.minY - pad],
+    [ex.maxX + pad, ex.minY - pad],
+    [ex.maxX + pad, ex.maxY + pad],
+    [ex.minX - pad, ex.maxY + pad],
+  ].map(([x, y]) => [(x - ex.minX) * 100, (y - ex.minY) * 100]);
+  const gradId = 'kb-case-grad-' + half;
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'kb-case');
-  svg.setAttribute('viewBox', `0 0 ${WIDTH_U * 100} ${HEIGHT_U * 100}`);
+  svg.setAttribute('viewBox', '0 0 ' + (W * 100) + ' ' + (H * 100));
   svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = `
-    <defs>
-      <linearGradient id="${gradId}" x1="0" y1="0" x2="0.35" y2="1">
-        <stop offset="0" stop-color="#141924"/>
-        <stop offset="0.65" stop-color="#090c12"/>
-      </linearGradient>
-    </defs>
-    <path d="${roundedPath(pts, 18)}" fill="url(#${gradId})"
-          stroke="#242d40" stroke-width="2.5"/>`;
+  svg.innerHTML =
+    '<defs>' +
+      '<linearGradient id="' + gradId + '" x1="0" y1="0" x2="0.35" y2="1">' +
+        '<stop offset="0" stop-color="#141924"/>' +
+        '<stop offset="0.65" stop-color="#090c12"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    '<path d="' + roundedPath(pts, 18) + '" fill="url(#' + gradId + ')"' +
+          ' stroke="#242d40" stroke-width="2.5"/>';
   return svg;
 }
 
 function leftGlow(col) {
   const hue = 175 + ((220 - 175) * col) / 6;
-  return `hsl(${hue.toFixed(0)} 100% 55% / 0.6)`;
+  return 'hsl(' + hue.toFixed(0) + ' 100% 55% / 0.6)';
 }
 
 function rightGlow(col) {
@@ -117,52 +91,62 @@ function rightGlow(col) {
   const i = Math.min(stops.length - 2, Math.floor(t));
   const frac = t - i;
   const hue = (stops[i] + (stops[i + 1] - stops[i]) * frac) % 360;
-  return `hsl(${hue.toFixed(0)} 100% 55% / 0.6)`;
+  return 'hsl(' + hue.toFixed(0) + ' 100% 55% / 0.6)';
 }
 
-function glowFor(key, geom) {
-  const col = Math.round(Math.min(6, Math.max(0, geom.x)));
+function glowFor(key, g) {
+  const col = Math.round(Math.min(6, Math.max(0, g.x)));
   return key.half === 'L' ? leftGlow(col) : rightGlow(col);
+}
+
+/** Base-layer legend of a key id (or null). */
+function keyLegend(board, id) {
+  return board?.KEYS?.find((k) => k.id === id)?.legends?.[0] ?? null;
 }
 
 /**
  * Mount a keyboard into `container`.
  * @param {HTMLElement} container
- * @param {object} [board] board from the registry (defaults to Corne V4)
+ * @param {object} [board] board from the registry (defaults to Lily58)
  * @returns {{ highlightTarget: (target: object|null) => void, destroy: () => void }}
  */
 export function renderKeyboard(container, board = PRIMARY_BOARD) {
   const KEYS = board.KEYS;
   const LAYER_HOLD = board.LAYER_HOLD;
   const shiftKeysFor = board.shiftKeysFor.bind(board);
+  const HOME_IDS = board.homeIds ?? [];
 
   const keyEls = new Map();
   const halfEls = new Map();
+
   container.innerHTML = '';
   container.setAttribute('role', 'img');
   container.setAttribute(
     'aria-label',
-    `${board.name || 'Split'} keyboard diagram showing the target key`,
+    (board.name || 'Split') + ' keyboard diagram showing the target key',
   );
 
   for (const half of ['L', 'R']) {
+    const ex = halfExtents(KEYS, board, half);
+    const WU = ex.maxX - ex.minX;
+    const HU = ex.maxY - ex.minY;
     const halfEl = document.createElement('div');
-    halfEl.className = `kb-half kb-half-${half}`;
+    halfEl.className = 'kb-half kb-half-' + half;
     halfEl.dataset.half = half;
-    halfEl.style.width = `${(WIDTH_U * U).toFixed(2)}rem`;
-    halfEl.style.height = `${(HEIGHT_U * U).toFixed(2)}rem`;
-    halfEl.appendChild(caseSvg(half));
+    halfEl.style.width = (WU * U).toFixed(2) + 'rem';
+    halfEl.style.height = (HU * U).toFixed(2) + 'rem';
+    halfEl.appendChild(caseSvg(half, ex));
 
     for (const key of KEYS.filter((k) => k.half === half)) {
-      const g = geomFor(key);
+      const g = geomFor(key, board);
       const el = document.createElement('div');
       el.className = 'kb-key';
       el.dataset.keyId = key.id;
-      el.style.left = `${((g.x - MIN_X) * U + KEY_GAP / 2).toFixed(2)}rem`;
-      el.style.top = `${((g.y - MIN_Y) * U + KEY_GAP / 2).toFixed(2)}rem`;
-      el.style.width = `${(g.w * U - KEY_GAP).toFixed(2)}rem`;
-      el.style.height = `${(g.h * U - KEY_GAP).toFixed(2)}rem`;
-      if (g.r) el.style.setProperty('--rot', `${g.r}deg`);
+      el.style.left = ((g.x - ex.minX) * U + KEY_GAP / 2).toFixed(2) + 'rem';
+      el.style.top = ((g.y - ex.minY) * U + KEY_GAP / 2).toFixed(2) + 'rem';
+      el.style.width = (g.w * U - KEY_GAP).toFixed(2) + 'rem';
+      el.style.height = (g.h * U - KEY_GAP).toFixed(2) + 'rem';
+      if (g.r) el.style.setProperty('--rot', g.r + 'deg');
       el.style.setProperty('--glow', glowFor(key, g));
 
       const legend = document.createElement('span');
@@ -251,13 +235,14 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
     }
 
     if (target.layer > 0) {
-      const holdEl = keyEls.get(LAYER_HOLD[target.layer]);
+      const holdId = LAYER_HOLD[target.layer];
+      const holdEl = keyEls.get(holdId);
       if (holdEl) {
         holdEl.classList.add('kb-hold');
         holdEl.closest('.kb-half')?.classList.add('kb-needed-half');
         const badge = holdEl.querySelector('.kb-badge');
         badge.hidden = false;
-        badge.textContent = target.layer === 1 ? 'HOLD L-FN' : 'HOLD R-FN';
+        badge.textContent = 'HOLD ' + (keyLegend(board, holdId) ?? '');
       }
     }
     if (target.shift) {
@@ -275,8 +260,6 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
   }
 
   paintBaseLegends();
-
-  const HOME_IDS = new Set(['L11', 'L12', 'L13', 'L14', 'R11', 'R12', 'R13', 'R14']);
 
   function setHomeGhost(on) {
     for (const id of HOME_IDS) {
@@ -316,10 +299,8 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
       el?.classList.remove('kb-heat');
     }
     if (!max) return;
-    // Map single-char base/layer legends back to keys via first match in KEYS legends
     for (const [ch, n] of Object.entries(heatmap || {})) {
       if (!n) continue;
-      // Find key whose any single-char legend matches
       for (const key of KEYS) {
         for (const layer of [0, 1, 2]) {
           const leg = key.legends[layer];
@@ -373,3 +354,4 @@ export function renderHeatmapBoard(container, board, heatmap) {
   container.classList.add('kb-heatmap-view');
   return ctrl;
 }
+

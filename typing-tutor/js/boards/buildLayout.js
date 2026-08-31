@@ -33,8 +33,10 @@ export function buildCharMap({
   const holdIds = new Set(Object.values(layerHold));
 
   for (const key of keys) {
-    if (holdIds.has(key.id)) continue;
     for (const layer of [0, 1, 2]) {
+      // Hold-tap keys (e.g. tap-comma/hold-NAV) still contribute their tap legend;
+      // only their held-layer legends (if any) are not typeable output.
+      if (holdIds.has(key.id) && layer > 0) continue;
       const legend = key.legends[layer];
       if (!legend || [...legend].length !== 1) continue;
       const ch = layer === 0 ? legend.toLowerCase() : legend;

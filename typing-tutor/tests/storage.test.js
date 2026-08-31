@@ -10,7 +10,7 @@ function fakeBacking(initial = {}) {
 }
 
 function store(backing = fakeBacking()) {
-  return createStorage(IDS, backing, { defaultBoardId: 'corne-v4' });
+  return createStorage(IDS, backing, { defaultBoardId: 'lily58' });
 }
 
 test('PASS_ACCURACY is 90 and FLUENT_WPM is 25', () => {
@@ -143,7 +143,7 @@ test('migrates flat v2 and multi-board v3', () => {
     stages: { s1: { unlocked: true, bestWpm: 10, bestAccuracy: 91, timesPlayed: 1 } },
     heatmap: { z: 2 },
   };
-  const data = createStorage(IDS, fakeBacking({ [STORE_KEY]: JSON.stringify(flat) }), { defaultBoardId: 'corne-v4' }).load();
+    const data = createStorage(IDS, fakeBacking({ [STORE_KEY]: JSON.stringify(flat) }), { defaultBoardId: 'lily58' }).load();
   assert.equal(data.heatmap.z, 2);
   assert.equal(data.stages.s1.bestWpm, 10);
   assert.ok(Array.isArray(data.stages.s1.recentRuns));

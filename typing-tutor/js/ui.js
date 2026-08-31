@@ -424,8 +424,8 @@ export function renderCheatSheet(board) {
   if (!host) return;
   const layers = [
     { n: 0, title: 'Layer 0 · base' },
-    { n: 1, title: 'Layer 1 · hold left Fn' },
-    { n: 2, title: 'Layer 2 · hold right Fn' },
+    { n: 1, title: 'Layer 1 · hold comma (NAV)' },
+    { n: 2, title: 'Layer 2 · unused' },
   ];
   host.innerHTML = layers.map(({ n, title }) => {
     const rows = [[], [], [], []];

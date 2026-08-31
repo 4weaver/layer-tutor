@@ -3,10 +3,10 @@
 // Schema v4 (multi-board):
 // {
 //   version: 4,
-//   activeBoardId: 'corne-v4',
+//   activeBoardId: 'lily58',
 //   onboardingDone: false,
 //   boards: {
-//     'corne-v4': {
+//     'lily58': {
 //       stages: { id: { unlocked, bestWpm, bestAccuracy, timesPlayed, fluent,
 //                        recentRuns: [{wpm,accuracy,at}], note, wpmGoal } },
 //       heatmap: { ch: n },
@@ -141,7 +141,7 @@ function normalizeMetricMap(raw, transition = false) {
  * @param {{ defaultBoardId?: string }} [opts]
  */
 export function createStorage(stageIds, backing = globalThis.localStorage, opts = {}) {
-  const defaultBoardId = opts.defaultBoardId || 'corne-v4';
+  const defaultBoardId = opts.defaultBoardId || 'lily58';
 
   function readRaw() {
     try {

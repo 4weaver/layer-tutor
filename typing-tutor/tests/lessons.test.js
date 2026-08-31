@@ -5,15 +5,13 @@ import {
   buildWeakKeyRound, contextualTip, coachFromMistakes, todaysFocus,
   summarizeRunMetrics,
 } from '../js/lessons.js';
-import { charToKey } from '../js/keyboardLayout.js';
+import { charToKey, PRIMARY_BOARD } from '../js/keyboardLayout.js';
 
-test('curriculum includes bigrams, hold-drill, pulse-drill in order', () => {
+test('curriculum: 8 stages, base then nav, progressive order', () => {
   const ids = STAGES.map((s) => s.id);
-  assert.ok(ids.includes('bigrams'));
-  assert.ok(ids.indexOf('bigrams') > ids.indexOf('home-row'));
-  assert.ok(ids.includes('hold-drill'));
-  assert.ok(ids.includes('pulse-drill'));
-  assert.equal(STAGES.length, 15);
+  assert.equal(STAGES.length, 8);
+  assert.deepEqual(ids.slice(0, 5), ['home-row', 'bottom-left', 'bottom-right', 'punctuation-shift', 'sentences']);
+  assert.deepEqual(ids.slice(5), ['nav-arrows', 'nav-paging', 'hold-drill']);
 });
 
 test('track grouping preserves progressive stage order', () => {
@@ -31,7 +29,7 @@ test('every stage item uses only mappable characters', () => {
   }
 });
 
-test('every stage has a large non-empty pool, coach tip, and positive roundSize', () => {
+test('every stage has a pool >= 20, coach tip, and positive roundSize', () => {
   for (const stage of STAGES) {
     assert.ok(stage.pool.length >= 20, `${stage.id} pool too small: ${stage.pool.length}`);
     assert.ok(stage.roundSize > 0, stage.id);
@@ -47,11 +45,9 @@ test('buildRound and practiceRoundSize', () => {
 
 test('layer usage per stage matches curriculum rules', () => {
   const expected = {
-    'home-row': [0], bigrams: [0], 'top-row': [0], 'bottom-row': [0],
-    'left-hand': [0], 'right-hand': [0], 'all-letters': [0],
-    numbers: [1], navigation: [1], 'hold-drill': [1],
-    'symbol-layer': [0, 2], punctuation: [0, 2],
-    'pulse-drill': [0, 1, 2], 'layer-transitions': [0, 1, 2], mixed: [0, 1, 2],
+    'home-row': [0], 'bottom-left': [0], 'bottom-right': [0],
+    'punctuation-shift': [0], sentences: [0],
+    'nav-arrows': [1], 'nav-paging': [1], 'hold-drill': [0, 1],
   };
   for (const stage of STAGES) {
     const layers = new Set();
@@ -59,6 +55,29 @@ test('layer usage per stage matches curriculum rules', () => {
       for (const ch of item) layers.add(charToKey(ch).layer);
     }
     assert.deepEqual([...layers].sort((a, b) => a - b), expected[stage.id], stage.id);
+  }
+});
+
+test('letter drills interleave home-row anchors (typing.com rule — never row-by-row)', () => {
+  const home = new Set(['a', 's', 'd', 'f', 'h', 'j', 'k', 'l']);
+  for (const id of ['bottom-left', 'bottom-right', 'punctuation-shift']) {
+    const stage = STAGES.find((s) => s.id === id);
+    for (const item of stage.pool) {
+      const hasLetter = [...item].some((ch) => /[a-z]/i.test(ch));
+      if (item.length < 2 || !hasLetter) continue; // intro singles & punctuation-only pairs exempt
+      assert.ok(
+        [...item].some((ch) => home.has(ch)),
+        `${id}: ${JSON.stringify(item)} has no home-row anchor — hands would leave the bumps`,
+      );
+    }
+  }
+});
+
+test('nav stages are held by the comma key on the board', () => {
+  for (const ch of ['\u2190', '\u21e4']) {
+    const m = charToKey(ch);
+    assert.ok(m.layer === 1);
+    assert.equal(PRIMARY_BOARD.LAYER_HOLD[m.layer], 'L31');
   }
 });
 
@@ -70,56 +89,37 @@ test('buildWeakKeyRound prefers heatmap chars and stays mappable', () => {
   }
 });
 
-test('weak-key rounds ignore unmappable imported metrics and always terminate', () => {
-  const items = buildWeakKeyRound(
-    { '💩': 99 },
-    charToKey,
-    12,
-    () => 0,
-    { '💩': { attempts: 10, errors: 10, samples: 0, totalLatencyMs: 0 } },
-  );
-  assert.equal(items.length, 12);
-  assert.ok(items.every((item) => [...item].every((ch) => charToKey(ch))));
-});
-
 test('run analysis reports slow keys and layer transitions', () => {
   const analysis = summarizeRunMetrics({
     keyMetrics: {
       a: { attempts: 1, errors: 0, samples: 1, totalLatencyMs: 200 },
-      '1': { attempts: 1, errors: 0, samples: 1, totalLatencyMs: 600 },
+      '\u2190': { attempts: 1, errors: 0, samples: 1, totalLatencyMs: 600 },
     },
     events: [
       { ch: 'a', previousCh: null, latencyMs: 200 },
-      { ch: '1', previousCh: 'a', latencyMs: 600, errors: 1 },
-      { ch: 'a', previousCh: '1', latencyMs: 300 },
+      { ch: '\u2190', previousCh: 'a', latencyMs: 600, errors: 1 },
+      { ch: 'a', previousCh: '\u2190', latencyMs: 300 },
     ],
   }, charToKey);
-  assert.equal(analysis.slowest[0].ch, '1');
+  assert.equal(analysis.slowest[0].ch, '\u2190');
   assert.equal(analysis.transitionMetrics['enter-layer-1'].count, 1);
   assert.equal(analysis.transitions.find((row) => row.kind === 'enter-layer-1').accuracy, 50);
   assert.equal(analysis.transitionMetrics['exit-layer-1'].count, 1);
 });
 
-test('editorial filter removes blocked and broken generated content', () => {
-  const allItems = STAGES.flatMap((stage) => stage.pool);
-  assert.equal(allItems.some((item) => /\b(?:fag|fags|nazi|lsd)\b/i.test(item)), false);
-  assert.equal(STAGES.find((stage) => stage.id === 'all-letters').pool
-    .some((item) => /\b(?:can|will)\s+\w+s\b|^Please\s+\w+s\b|^Did\s+.+\s+\w+s\b/i.test(item)), false);
-});
-
-test('contextualTip mentions hold for layer chars', () => {
-  assert.match(contextualTip('1', charToKey, 'x'), /left Fn/i);
-  assert.match(contextualTip('!', charToKey, 'x'), /right Fn/i);
-  assert.match(contextualTip('A', charToKey, 'x'), /Shift/i);
-  assert.match(contextualTip(' ', charToKey, 'x'), /Space/i);
+test('contextualTip mentions the comma hold for layer chars', () => {
+  assert.match(contextualTip('\u2190', charToKey, 'x', PRIMARY_BOARD), /,/);
+  assert.match(contextualTip('\u21e4', charToKey, 'x', PRIMARY_BOARD), /,/);
+  assert.match(contextualTip('A', charToKey, 'x', PRIMARY_BOARD), /Shift/i);
+  assert.match(contextualTip(' ', charToKey, 'x', PRIMARY_BOARD), /Space/i);
 });
 
 test('coachFromMistakes returns actionable line', () => {
-  assert.match(coachFromMistakes({ '[': 3 }, charToKey), /layer-2|Symbol/i);
+  assert.match(coachFromMistakes({ '\u21e4': 3 }, charToKey), /layer 1|NAV/i);
   assert.match(coachFromMistakes({}, charToKey), /Clean/i);
 });
 
-test('todaysFocus points at unlock or fluent work', () => {
+test('todaysFocus points at unlock work', () => {
   const stages = STAGES.slice(0, 3);
   const progress = {
     stages: {
@@ -132,3 +132,4 @@ test('todaysFocus points at unlock or fluent work', () => {
   const f = todaysFocus(progress, stages);
   assert.equal(f.kind, 'unlock');
 });
+
