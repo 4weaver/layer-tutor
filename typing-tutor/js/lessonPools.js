@@ -17,11 +17,13 @@ export const POOLS = {
     'had', 'sad', 'lad', 'lag', 'dash', 'flash', 'clash', 'salad',
     'lava', 'vax', 'sac', 'casa', 'salsa', 'fava',
   ],
-  // bottom-right: B under right index; N M shifted right — drills anchor to home row
+  // bottom-right: B N M . / sit directly under H J K L ; — drills anchor to home row
   'bottom-right': [
-    'b', 'n', 'm',
+    'b', 'n', 'm', '.', '/',
     'kb', 'bk', 'jn', 'nj', 'mj', 'jm',
+    'k.', '.k', 'j/', '/j', 'l.', '.l', 'k/', '/k',
     'ban', 'nab', 'man', 'jam', 'ham', 'bam',
+    'an.', 'am/', 'jam.', 'man.', 'ban.', 'ham/',
     'bag', 'lab', 'nag', 'jab', 'mash', 'bang',
     'bask', 'mall', 'ball', 'fall', 'half', 'lamb',
     'bank', 'bland', 'glam', 'mamba', 'jamb', 'blam',

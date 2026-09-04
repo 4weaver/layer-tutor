@@ -49,9 +49,9 @@ export const STAGES = [
   },
   {
     id: 'bottom-right',
-    name: 'Bottom Right · B N M',
+    name: 'Bottom Right · B N M . /',
     layerHint: 'Base layer · reach down, index-inner',
-    coachTip: 'B sits under the right index; N M shifted one column right. Reach down from the bumps and return to J/K/L after every key — home row is your anchor.',
+    coachTip: 'B N M . / sit straight under H J K L ;. Reach down from J/K/L, strike, and return to the bumps after every key — home row is your anchor.',
     roundSize: 48,
     pool: POOLS['bottom-right'],
     track: 'base',

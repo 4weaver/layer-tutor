@@ -133,3 +133,15 @@ test('todaysFocus points at unlock work', () => {
   assert.equal(f.kind, 'unlock');
 });
 
+test('bottom-right stage drills . and / alongside b n m, all board-resolvable', () => {
+  const stage = STAGES.find((s) => s.id === 'bottom-right');
+  const chars = new Set(stage.pool.join(''));
+  for (const ch of ['b', 'n', 'm', '.', '/']) {
+    assert.ok(chars.has(ch), `pool missing ${ch}`);
+    assert.ok(charToKey(ch), `${ch} does not resolve on the board`);
+  }
+  // '.' and '/' sit on the lower-right row (under L and ;), layer 0, no shift
+  assert.deepEqual(charToKey('.'), { keyId: 'R33', layer: 0, shift: false });
+  assert.deepEqual(charToKey('/'), { keyId: 'R34', layer: 0, shift: false });
+});
+

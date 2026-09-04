@@ -1,6 +1,6 @@
 // Offline support: network-first with cache fallback, so updates land
 // Bump CACHE when shipping a release so activate() drops the old bucket.
-const CACHE = 'layer-tutor-lily58-v3';
+const CACHE = 'layer-tutor-lily58-v4';
 const ASSETS = [
   './',
   './index.html',
