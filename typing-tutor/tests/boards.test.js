@@ -40,16 +40,18 @@ test('board geometry: every key has a finite position within sane bounds', () =>
   // space key is a wide/tall thumb key
   const space = pos['L42'];
   assert.ok(space.h > 1, 'space should be a tall thumb key');
-  // B (right index-inner) sits one+ columns inward from the right edge, below home H-J-K-L
-  assert.ok(pos['R32'].x >= pos['R21'].x, 'B should be inward of J');
+  // bottom-right row aligns under the home row: B N M . / under H J K L ;
+  assert.equal(pos['R30'].x, pos['R20'].x, 'B aligns with H');
+  assert.equal(pos['R32'].x, pos['R22'].x, 'M aligns with K');
+  assert.equal(pos['R34'].x, pos['R24'].x, '/ aligns with ;');
 });
 
 test('charToKey reflects the real ZMK keymap positions', () => {
   assert.deepEqual(charToKey('z'), { keyId: 'L32', layer: 0, shift: false });  // one column right of QWERTY
-  assert.deepEqual(charToKey('b'), { keyId: 'R32', layer: 0, shift: false });  // right index-inner
+  assert.deepEqual(charToKey('b'), { keyId: 'R30', layer: 0, shift: false });  // right index-inner
   assert.deepEqual(charToKey(','), { keyId: 'L31', layer: 0, shift: false });  // tap of the NAV trigger
   assert.deepEqual(charToKey('\u2190'), { keyId: 'R20', layer: 1, shift: false });  // NAV: H
-  assert.deepEqual(charToKey('\u21e4'), { keyId: 'R32', layer: 1, shift: false });  // NAV: B = HOME
+  assert.deepEqual(charToKey('\u21e4'), { keyId: 'R30', layer: 1, shift: false });  // NAV: B = HOME
 });
 
 test('NAV is held by the comma key; shift is the left home pinky', () => {
@@ -58,3 +60,14 @@ test('NAV is held by the comma key; shift is the left home pinky', () => {
   assert.deepEqual(PRIMARY_BOARD.SHIFT_KEYS, ['L20']);
 });
 
+
+test('lower-right row ids sit at cols 0-4, aligned under the home row', () => {
+  for (const id of ['R30', 'R31', 'R32', 'R33', 'R34']) {
+    const key = PRIMARY_BOARD.KEYS.find((k) => k.id === id);
+    assert.ok(key, 'missing ' + id);
+    assert.equal(key.col, Number(id[2]));
+    assert.ok(key.col <= 4, id + ' should sit under the home row, not past ;');
+  }
+  assert.equal(PRIMARY_BOARD.charToKey('b').keyId, 'R30');
+  assert.equal(PRIMARY_BOARD.charToKey('/').keyId, 'R34');
+});

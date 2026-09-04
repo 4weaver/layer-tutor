@@ -9,7 +9,7 @@ test('base-layer letters map to layer 0 without shift', () => {
   assert.deepEqual(charToKey('a'), { keyId: 'L21', layer: 0, shift: false });
   assert.deepEqual(charToKey('y'), { keyId: 'R10', layer: 0, shift: false });
   assert.deepEqual(charToKey('z'), { keyId: 'L32', layer: 0, shift: false });
-  assert.deepEqual(charToKey('b'), { keyId: 'R32', layer: 0, shift: false });
+  assert.deepEqual(charToKey('b'), { keyId: 'R30', layer: 0, shift: false });
 });
 
 test('uppercase letters need shift', () => {
@@ -20,8 +20,8 @@ test('uppercase letters need shift', () => {
 
 test('shifted punctuation resolves through shiftedL0', () => {
   assert.deepEqual(charToKey('<'), { keyId: 'L31', layer: 0, shift: true });
-  assert.deepEqual(charToKey('>'), { keyId: 'R35', layer: 0, shift: true });
-  assert.deepEqual(charToKey('?'), { keyId: 'R36', layer: 0, shift: true });
+  assert.deepEqual(charToKey('>'), { keyId: 'R33', layer: 0, shift: true });
+  assert.deepEqual(charToKey('?'), { keyId: 'R34', layer: 0, shift: true });
   assert.deepEqual(charToKey(':'), { keyId: 'R24', layer: 0, shift: true });
   assert.deepEqual(charToKey('_'), { keyId: 'R05', layer: 0, shift: true });
 });
@@ -31,10 +31,10 @@ test('NAV layer characters resolve to layer 1', () => {
   assert.deepEqual(charToKey('\u2193'), { keyId: 'R21', layer: 1, shift: false });
   assert.deepEqual(charToKey('\u2191'), { keyId: 'R22', layer: 1, shift: false });
   assert.deepEqual(charToKey('\u2192'), { keyId: 'R23', layer: 1, shift: false });
-  assert.deepEqual(charToKey('\u21e4'), { keyId: 'R32', layer: 1, shift: false });
-  assert.deepEqual(charToKey('\u21e5'), { keyId: 'R33', layer: 1, shift: false });
-  assert.deepEqual(charToKey('\u21d1'), { keyId: 'R34', layer: 1, shift: false });
-  assert.deepEqual(charToKey('\u21d3'), { keyId: 'R35', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u21e4'), { keyId: 'R30', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u21e5'), { keyId: 'R31', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u21d1'), { keyId: 'R32', layer: 1, shift: false });
+  assert.deepEqual(charToKey('\u21d3'), { keyId: 'R33', layer: 1, shift: false });
 });
 
 test('char map is unique; NAV held by comma; single shift key', () => {
