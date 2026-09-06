@@ -397,3 +397,57 @@ export function todaysFocus(progress, stages = STAGES) {
     stageId: 'mixed',
   };
 }
+
+
+// ---- Intro key-drill generator (typing.com sandwich / home-anchor mode) ----
+//
+// For a brand-new base-layer key `ch`, emit ONE continuous drill string that
+// wraps that key in each home-row anchor so the learner leaves the bump only to
+// strike `ch` and always returns home: `aba sbs dbd fbf gbg ...`.  Run immediately
+// before a stage's real-word pool so the new key is anchored before words appear.
+
+/** Home-row anchors in reach order (board homeIds L21-L25 + R20-R23). */
+export const INTRO_HOME_ORDER = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'];
+
+/**
+ * Emit one intro line: every home anchor wraps `ch` as `anchor,ch,anchor`,
+ * each 3-char sandwich joined by a single space — so the whole line is typed
+ * under B-mode group rules (real space between words, Enter ends the line).
+ * buildIntroDrill('b') => 'aba sbs dbd fbf gbg hbh jbj kbk lbl'.
+ * Every character is a mappable base-layer key (anchors + `ch`).
+ * @param {string} ch a single mappable base-layer target char
+ */
+export function buildIntroDrill(ch, homeOrder = INTRO_HOME_ORDER) {
+  return homeOrder.map((h) => h + ch + h).join(' ');
+}
+
+
+/**
+ * Phase-II per-key drill: rolling chains / 2-key alternations, the next rung after
+ * pure sandwiches anchor `ch`. Each line is a space-separated string of mappable
+ * base-layer keys. Curated per key (typing.com authors these by hand) — this table
+ * is the single place to tune one key until it feels right.
+ */
+export const KEY_ROLLS = {
+  b: 'jbk lbg',
+  n: 'jnh lng',
+  m: 'jml lmg',
+  '.': 'jh. kh.',
+  v: 'fva gva',
+  c: 'dcd sdc',
+  x: 'sxs ads',
+  z: 'aza sas',
+};
+
+/**
+ * All drill lines to teach a base-layer key `ch`, in order:
+ *   [0] pick-up sandwich (every home anchor hugs the target)
+ *   [1..] optional curated rolling chains from KEY_ROLLS
+ * Each returned string is a line (space-separated words of mappable keys).
+ */
+export function buildKeyDrills(ch) {
+  const lines = [buildIntroDrill(ch)];
+  const roll = KEY_ROLLS[ch];
+  if (roll) lines.push(roll);
+  return lines;
+}

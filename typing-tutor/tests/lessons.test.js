@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   STAGES, TRACK_META, buildRound, practiceRoundSize, PRACTICE_ROUND_MULT,
   buildWeakKeyRound, contextualTip, coachFromMistakes, todaysFocus,
-  summarizeRunMetrics,
+  summarizeRunMetrics, buildIntroDrill, INTRO_HOME_ORDER, buildKeyDrills, KEY_ROLLS,
 } from '../js/lessons.js';
 import { charToKey } from '../js/keyboardLayout.js';
 
@@ -131,4 +131,47 @@ test('todaysFocus points at unlock or fluent work', () => {
   };
   const f = todaysFocus(progress, stages);
   assert.equal(f.kind, 'unlock');
+});
+
+// ---- Intro key-drill generator ----
+
+test('buildIntroDrill wraps a target in every home anchor, space-separated', () => {
+  const line = buildIntroDrill('b');
+  const words = line.split(' ');
+  assert.equal(words.length, INTRO_HOME_ORDER.length);
+  assert.deepEqual(words.map((w) => w[0]), INTRO_HOME_ORDER);
+  assert.deepEqual(words.map((w) => w[2]), INTRO_HOME_ORDER);
+  assert.ok(words.every((w) => w[1] === 'b'));
+  assert.equal(line, 'aba sbs dbd fbf gbg hbh jbj kbk lbl');
+});
+
+test('intro sandwiches are deterministic and anchor-to-target order matches home', () => {
+  const d = buildIntroDrill('d', ['f', 'a']);
+  assert.equal(d, 'fdf ada'); // respects a custom tiny anchor order for pairing tests
+});
+
+test('canonical first lower-row target v matches mappable anchors', () => {
+  for (const ch of ['v', 'b', '.']) {
+    for (const w of buildIntroDrill(ch).split(' ')) {
+      for (const c of w) assert.ok(charToKey(c), `${JSON.stringify(c)} of ${ch} drill unmapped`);
+    }
+  }
+});
+
+// ---- Phase-II rolling/key drills ----
+
+test('buildKeyDrills returns sandwich first, then curated rolls', () => {
+  const lines = buildKeyDrills('b');
+  assert.equal(lines[0], 'aba sbs dbd fbf gbg hbh jbj kbk lbl');
+  assert.equal(lines[1], 'jbk lbg');
+  assert.equal(buildKeyDrills('q').length, 1); // unmatched -> sandwich only
+});
+
+test('every curated roll word is fully mappable', () => {
+  for (const [ch, roll] of Object.entries(KEY_ROLLS)) {
+    for (const w of roll.split(' ')) {
+      assert.ok(w.length >= 3, `roll word too short: ${JSON.stringify(w)}`);
+      for (const c of w) assert.ok(charToKey(c), `${JSON.stringify(c)} in roll for ${ch} unmapped`);
+    }
+  }
 });
