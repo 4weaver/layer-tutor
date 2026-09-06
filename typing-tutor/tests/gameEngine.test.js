@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, currentItem, currentChar, handleKey, stats } from '../js/gameEngine.js';
+import { createGame, currentItem, currentChar, handleKey, stats, isLineArmed, advanceLine } from '../js/gameEngine.js';
 
 test('typing correct chars advances cursor, then items', () => {
   const g = createGame(['ab', 'c']);
@@ -92,4 +92,35 @@ test('records per-key attempts, response latency, and transition events', () => 
     { ch: 'a', previousCh: null, latencyMs: 200, errors: 1 },
     { ch: 'b', previousCh: 'a', latencyMs: 200, errors: 0 },
   ]);
+});
+
+// ---- lineGate mode (B-mode: each item is a LINE, explicit advance on line end) ----
+
+test('lineGate pauses at line end and requires advanceLine to go next', () => {
+  const g = createGame(['ab', 'cd'], 0, { lineGate: true });
+  // finish 'ab'
+  assert.equal(handleKey(g, 'a', 10), 'correct');
+  assert.equal(handleKey(g, 'b', 20), 'line-done'); // NOT done, waits
+  assert.equal(g.done, false);
+  assert.equal(isLineArmed(g), true);
+  assert.equal(currentChar(g), null);
+  assert.equal(handleKey(g, 'x', 30), 'awaiting-advance'); // extra typing blocked
+  // advance to line 2
+  assert.equal(advanceLine(g), 'next');
+  assert.equal(isLineArmed(g), false);
+  assert.equal(currentItem(g), 'cd');
+  assert.equal(handleKey(g, 'c', 40), 'correct');
+  assert.equal(handleKey(g, 'd', 50), 'line-complete-last'); // still armed
+  assert.equal(g.done, false);
+  assert.equal(advanceLine(g), 'done');
+  assert.equal(g.done, true);
+});
+
+test('lineGate disabled keeps legacy auto-advance', () => {
+  const g = createGame(['ab', 'c'], 0);
+  assert.equal(handleKey(g, 'a', 0), 'correct');
+  assert.equal(handleKey(g, 'b', 100), 'correct'); // auto advanced to 'c'
+  assert.equal(currentItem(g), 'c');
+  assert.equal(isLineArmed(g), false);
+  assert.equal(handleKey(g, 'c', 200), 'done');
 });

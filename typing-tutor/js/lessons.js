@@ -451,3 +451,27 @@ export function buildKeyDrills(ch) {
   if (roll) lines.push(roll);
   return lines;
 }
+
+
+/**
+ * Convert an ordered list of round items into B-mode LINES.
+ * Items that already contain a space (a whole sentence / pre-joined drill line),
+ * are treated as atomic: kept intact as their own line. Bare single-word items
+ * are buffered into lines of up to `wordsPerLine` words joined by spaces.
+ */
+export function toLinesAtoms(items, wordsPerLine = 4) {
+  const lines = [];
+  let buf = [];
+  const flush = () => {
+    if (buf.length) lines.push(buf.join(' '));
+    buf = [];
+  };
+  for (const it of items || []) {
+    if (typeof it !== 'string' || !it.trim()) continue;
+    if (it.includes(' ')) { flush(); lines.push(it.trim()); continue; }
+    buf.push(it.trim());
+    if (buf.length >= wordsPerLine) flush();
+  }
+  flush();
+  return lines;
+}
