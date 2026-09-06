@@ -310,6 +310,8 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0, 229, 25
 }
 .ch.pending { color: var(--text-dim); opacity: 0.5; }
 .ch.space { opacity: 0.35; }
+.ch.current.space, .ch.space.next-by-space { opacity: 1; }
+.ch.space.current { color: var(--accent); border-bottom: 3px solid var(--accent); }
 .ch.enter { opacity: 0.28; font-weight: 300; min-width: 1.2ch; margin-left: 0.15em; color: var(--text-dim); }
 .ch.enter-armed { opacity: 1; color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { border-color: transparent; } }

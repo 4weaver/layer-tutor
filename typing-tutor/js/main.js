@@ -546,7 +546,7 @@ document.addEventListener('keydown', (e) => {
     if (ch2 != null) {
       countArmedMistake(game);
       sound.playError();
-      ui.flashError();
+      ui.flashEnter();
       ui.setContextTip('Line done — press Enter (⏎) to continue.');
     }
     return;
