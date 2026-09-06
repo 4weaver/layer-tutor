@@ -4,7 +4,7 @@
 // zero out the clock before the learner has begun the line. Errors before
 // that still count toward accuracy and the mistake map.
 
-export function createGame(items, now = null) {
+export function createGame(items, now = null, { lineGate = false } = {}) {
   return {
     items,
     itemIndex: 0,
@@ -20,6 +20,10 @@ export function createGame(items, now = null) {
     previousCorrectChar: null,
     currentTargetErrors: 0,
     done: false,
+    // lineGate: when true each item is a LINE; finishing it does NOT auto-advance.
+    // The caller must call requestAdvance()/advance() with an explicit Enter/key.
+    lineGate,
+    lineArmed: false, // last char of a line reached -> awaiting explicit advance
   };
 }
 
@@ -27,13 +31,43 @@ export function currentItem(game) {
   return game.done ? null : game.items[game.itemIndex];
 }
 
+/**
+ * Current target character, if we are mid-line. When a line is completed and
+ * armed (awaiting Enter), there is no char to type -> null.
+ */
 export function currentChar(game) {
+  if (game.lineArmed) return null;
   const item = currentItem(game);
   return item ? item[game.cursor] : null;
 }
 
+/**
+ * Whether the current line has been fully typed and awaits an explicit advance.
+ */
+export function isLineArmed(game) {
+  return !game.done && !!game.lineGate && game.lineArmed;
+}
+
+/**
+ * Advance past a completed (armed) line. Returns 'next' (entered/advanced) or
+ * 'done' when the whole round concluded. Only valid when isLineArmed().
+ */
+export function advanceLine(game) {
+  if (game.done || !game.lineArmed) return null;
+  game.lineArmed = false;
+  game.itemIndex += 1;
+  game.cursor = 0;
+  if (game.itemIndex >= game.items.length) {
+    game.done = true;
+    return 'done';
+  }
+  // a new line begins: set the first target clock only on a keystroke as usual
+  return 'next';
+}
+
 export function handleKey(game, ch, now) {
   if (game.done) return 'ignored';
+  if (game.lineArmed) return 'awaiting-advance'; // must call advanceLine() first
   const target = currentChar(game);
   const metric = game.keyMetrics[target] ?? {
     attempts: 0, correct: 0, errors: 0, totalLatencyMs: 0, samples: 0,
@@ -58,6 +92,19 @@ export function handleKey(game, ch, now) {
     game.previousCorrectChar = target;
     game.currentTargetErrors = 0;
     game.cursor += 1;
+    const atEndOfItem = game.cursor >= game.items[game.itemIndex].length;
+    if (atEndOfItem && game.lineGate && game.itemIndex < game.items.length - 1) {
+      // Line finished but not last: stay on this line, wait for explicit advance.
+      game.lineArmed = true;
+      game.targetStartedAt = now;
+      return 'line-done';
+    }
+    if (atEndOfItem && game.lineGate) {
+      // Last line finished -> still awaits one final Enter before completing.
+      game.lineArmed = true;
+      game.targetStartedAt = now;
+      return 'line-complete-last';
+    }
     if (game.cursor >= game.items[game.itemIndex].length) {
       game.itemIndex += 1;
       game.cursor = 0;

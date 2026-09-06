@@ -1,15 +1,15 @@
 // App bootstrap and game orchestration.
 
 import {
-  STAGES, buildRound, practiceRoundSize, PASS_ACCURACY,
+  STAGES, buildRound, PASS_ACCURACY,
   buildWeakKeyRound, buildCustomRound, contextualTip, coachFromMistakes,
-  summarizeRunMetrics,
+  summarizeRunMetrics, toLinesAtoms,
 } from './lessons.js';
 import {
   getBoard, listPlayableBoards, DEFAULT_BOARD_ID, boardFullLabel,
 } from './boards/index.js';
 import {
-  createGame, currentItem, currentChar, handleKey, stats, progressCounts,
+  createGame, currentItem, currentChar, handleKey, stats, progressCounts, isLineArmed, advanceLine,
 } from './gameEngine.js';
 import { createStorage } from './storage.js';
 import { renderKeyboard, renderHeatmapBoard } from './keyboardRenderer.js';
@@ -216,12 +216,18 @@ function startStage(s, opts = {}) {
     runMode = 'weak';
     practice = true;
   } else {
-    const count = opts.practice ? practiceRoundSize(s) : s.roundSize;
+    // B-mode line pacing: a normal round == one reasonable session. Practice no longer
+    // multiplies tokens (~120/144 -> too long); it plays the same round but free of unlock
+    // side-effects. Line width defaults to 4 words (intro drills opt into 3 via stage).
+    const count = s.roundSize;
     items = buildRound(s, Math.random, count);
   }
 
-  game = createGame(items, now());
-
+  // B-mode (uniform X): pack tokens into short LINES (words spaced, Enter after each)
+  // and enable explicit line-advance. Stage.wordsPerLine overrides the default 4.
+  const lines = toLinesAtoms(items, stage.wordsPerLine ?? 4);
+  const effectiveItems = lines.length ? lines : (['a']);
+  game = createGame(effectiveItems, now(), { lineGate: true });
   document.getElementById('game-stage-name').textContent =
     runMode === 'practice' ? `${stage.name} · practice` : stage.name;
   document.getElementById('layer-hint').textContent = stage.layerHint;
@@ -240,12 +246,17 @@ function refresh() {
   if (runMode === 'sandbox') return;
   const item = currentItem(game);
   if (item == null) return;
-  ui.renderPrompt(item, game.cursor);
+  const armed = isLineArmed(game);
+  ui.renderPrompt(item, game.cursor, armed);
   const ch = currentChar(game);
-  const target = activeBoard.charToKey(ch);
+  const target = armed ? null : activeBoard.charToKey(ch);
   kb?.highlightTarget(target);
   applyBoardChrome(target);
-  ui.setContextTip(contextualTip(ch, (c) => activeBoard.charToKey(c), stage?.coachTip, activeBoard));
+  if (armed) {
+    ui.setContextTip('Line done — press Enter (⏎) for the next line.');
+  } else {
+    ui.setContextTip(contextualTip(ch, (c) => activeBoard.charToKey(c), stage?.coachTip, activeBoard));
+  }
   const { frac } = progressCounts(game);
   ui.renderProgressBar(frac);
   const label = `${game.itemIndex + 1}/${game.items.length}`;
@@ -519,6 +530,18 @@ document.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
 
+  // B-mode: a completed line waits on an explicit Enter to advance to the next line.
+  if (game && isLineArmed(game) && isGameScreen()) {
+    const isEnter = e.key === 'Enter' || e.code === 'Enter' || e.key === 'NumpadEnter';
+    e.preventDefault();
+    e.stopPropagation();
+    if (isEnter) {
+      const r = advanceLine(game);
+      if (r === 'done') finishStage();
+      else refresh();
+    }
+    return;
+  }
   const ch = keyToChar(e);
   if (ch === null) return;
 

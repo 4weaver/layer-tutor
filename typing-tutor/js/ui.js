@@ -244,18 +244,27 @@ function sparkline(values) {
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline fill="none" stroke="currentColor" stroke-width="1.5" points="${pts}"/></svg>`;
 }
 
-export function renderPrompt(item, cursor) {
+export function renderPrompt(item, cursor, armed = false) {
   const el = document.getElementById('prompt');
   if (!el) return;
   el.innerHTML = '';
   el.setAttribute('aria-label', `Type: ${item}`);
-  [...item].forEach((ch, i) => {
+  // Render each char as a span. A space char shows as '·' (even inside a line),
+  // i.e. real spaces between words are typed keys — matches the B-mode engine.
+  String(item).split('').forEach((ch, i) => {
     const span = document.createElement('span');
     span.textContent = ch === ' ' ? '·' : ch;
     span.className = i < cursor ? 'ch typed' : i === cursor ? 'ch current' : 'ch pending';
     if (ch === ' ') span.classList.add('space');
     el.appendChild(span);
   });
+  if (armed) {
+    const trail = document.createElement('span');
+    trail.className = 'ch enter';
+    trail.textContent = '⏎';
+    trail.setAttribute('aria-hidden', 'true');
+    el.appendChild(trail);
+  }
 }
 
 export function flashError() {
