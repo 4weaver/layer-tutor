@@ -65,6 +65,23 @@ export function advanceLine(game) {
   return 'next';
 }
 
+/**
+ * While a finished line awaits Enter, an unexpected (non-Enter) key is counted as
+ * an error on a sentinel '<Enter>' token so the slip is not silently forgiven.
+ * Returns true when recorded — caller plays its own visual/sound cue.
+ */
+export function countArmedMistake(game) {
+  if (game.done || !game.lineArmed) return false;
+  const key = '<Enter>';
+  const metric = game.keyMetrics[key] ?? { attempts: 0, correct: 0, errors: 0, totalLatencyMs: 0, samples: 0 };
+  metric.attempts += 1;
+  metric.errors += 1;
+  game.keyMetrics[key] = metric;
+  game.errors += 1;
+  game.mistakes[key] = (game.mistakes[key] ?? 0) + 1;
+  return true;
+}
+
 export function handleKey(game, ch, now) {
   if (game.done) return 'ignored';
   if (game.lineArmed) return 'awaiting-advance'; // must call advanceLine() first

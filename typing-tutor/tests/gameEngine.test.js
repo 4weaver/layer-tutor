@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, currentItem, currentChar, handleKey, stats, isLineArmed, advanceLine } from '../js/gameEngine.js';
+import { createGame, currentItem, currentChar, handleKey, stats, isLineArmed, advanceLine, countArmedMistake } from '../js/gameEngine.js';
 
 test('typing correct chars advances cursor, then items', () => {
   const g = createGame(['ab', 'c']);
@@ -123,4 +123,17 @@ test('lineGate disabled keeps legacy auto-advance', () => {
   assert.equal(currentItem(g), 'c');
   assert.equal(isLineArmed(g), false);
   assert.equal(handleKey(g, 'c', 200), 'done');
+});
+
+test('countArmedMistake records an error when typing the wrong key while armed', () => {
+  const g = createGame(['ab', 'cd'], 0, { lineGate: true });
+  handleKey(g, 'a', 1);
+  assert.equal(handleKey(g, 'b', 2), 'line-done'); // armed on line 1
+  assert.equal(g.errors, 0);
+  assert.equal(countArmedMistake(g), true);
+  assert.equal(g.errors, 1);
+  assert.equal(g.mistakes['<Enter>'], 1);
+  // not armed anymore after advance -> no-op
+  advanceLine(g);
+  assert.equal(countArmedMistake(g), false);
 });

@@ -258,13 +258,14 @@ export function renderPrompt(item, cursor, armed = false) {
     if (ch === ' ') span.classList.add('space');
     el.appendChild(span);
   });
-  if (armed) {
-    const trail = document.createElement('span');
-    trail.className = 'ch enter';
-    trail.textContent = '⏎';
-    trail.setAttribute('aria-hidden', 'true');
-    el.appendChild(trail);
-  }
+  // Persistent end-of-line Enter affordance: faint while the line is incomplete,
+  // lit when the line is done and awaiting the Enter key. Always present so the
+  // line break never 'suddenly appears' at the last char (confirmed UX).
+  const trail = document.createElement('span');
+  trail.className = armed ? 'ch enter enter-armed' : 'ch enter';
+  trail.textContent = '⏎';
+  trail.setAttribute('aria-hidden', 'true');
+  el.appendChild(trail);
 }
 
 export function flashError() {
