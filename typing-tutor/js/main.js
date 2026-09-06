@@ -9,7 +9,7 @@ import {
   getBoard, listPlayableBoards, DEFAULT_BOARD_ID, boardFullLabel,
 } from './boards/index.js';
 import {
-  createGame, currentItem, currentChar, handleKey, stats, progressCounts, isLineArmed, advanceLine,
+  createGame, currentItem, currentChar, handleKey, stats, progressCounts, isLineArmed, advanceLine, countArmedMistake,
 } from './gameEngine.js';
 import { createStorage } from './storage.js';
 import { renderKeyboard, renderHeatmapBoard } from './keyboardRenderer.js';
@@ -536,6 +536,15 @@ document.addEventListener('keydown', (e) => {
       const r = advanceLine(game);
       if (r === 'done') finishStage();
       else refresh();
+      return;
+    }
+    // Wrong key while Enter is due: do NOT silently forgive (confirmed UX).
+    const ch2 = keyToChar(e);
+    if (ch2 != null) {
+      countArmedMistake(game);
+      sound.playError();
+      ui.flashError();
+      ui.setContextTip('Line done — press Enter (⏎) to continue.');
     }
     return;
   }
