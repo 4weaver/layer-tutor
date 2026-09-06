@@ -276,6 +276,17 @@ export function flashError() {
   cur.classList.add('error-flash');
 }
 
+/** Flash the end-of-line Enter affordance (used when a wrong key is pressed while
+ * the line is complete and awaiting Enter). Does nothing if no crafted span exists.
+ */
+export function flashEnter() {
+  const ent = document.querySelector('#prompt .enter.enter-armed');
+  if (!ent) return;
+  ent.classList.remove('error-flash');
+  void ent.offsetWidth;
+  ent.classList.add('error-flash');
+}
+
 export function renderLiveStats({ wpm, accuracy }, progressText, goal = 0) {
   const wpmEl = document.getElementById('live-wpm');
   const accEl = document.getElementById('live-acc');
