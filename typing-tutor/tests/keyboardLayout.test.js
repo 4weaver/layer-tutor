@@ -50,7 +50,7 @@ test('shiftKeysFor picks the (only) shift for any target', () => {
   assert.deepEqual(shiftKeysFor({ keyId: 'R20', shift: false }), []);
 });
 
-test('KEYS count matches the keymap (51 rendered keys incl. named ones)', () => {
-  assert.equal(KEYS.length, 51);
+test('KEYS count matches the keymap (52 rendered keys incl. named ones)', () => {
+  assert.equal(KEYS.length, 52);
 });
 
