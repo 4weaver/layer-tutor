@@ -286,11 +286,16 @@ Older flat (v1/v2) and multi-board (v3) saves migrate automatically. Export / im
 
 ## Adding a keyboard
 
-1. Export Vial → `layouts/<id>.vil`
-2. Add `typing-tutor/js/boards/<id>.js` using `createLayout()` (copy `corne-v4.js`)
+The tutor **consumes a board declaration only** — it does not couple to a keymap
+repo path or a single board. Exporters (Vial check, or an external ZMK
+`gen_board`) live outside the render/tutor loop. Full contract:
+[`typing-tutor/BOARD_INPUT.md`](typing-tutor/BOARD_INPUT.md).
+
+1. Produce a declaration (Vial → `layouts/<id>.vil`, or JSON / generated JS from an external exporter)
+2. Add `typing-tutor/js/boards/<id>.js` via `createLayout()` / `boardFromDeclaration()` (copy `corne-v4.js`)
 3. Register it in `typing-tutor/js/boards/index.js` (`BOARDS` array)
-4. `node scripts/check-layout.mjs` must pass
-5. If the physical geometry differs, extend `keyboardRenderer.js`
+4. `node scripts/check-layout.mjs` must pass (Vial boards)
+5. Prefer a `positions` map on the board; without one the renderer keeps the Corne stagger fallback
 6. Smoke-test on device (desktop + phone USB-OTG if you care)
 
 **Vial row convention:** each half is stored **outer → inner**. Tutor tables are **visual left → right** — reverse the right half when deriving legends.

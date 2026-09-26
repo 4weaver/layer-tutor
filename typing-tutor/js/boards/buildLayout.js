@@ -33,8 +33,10 @@ export function buildCharMap({
   const holdIds = new Set(Object.values(layerHold));
 
   for (const key of keys) {
-    if (holdIds.has(key.id)) continue;
     for (const layer of [0, 1, 2]) {
+      // Hold-tap keys (e.g. tap-comma/hold-NAV) still contribute their tap legend;
+      // only their held-layer legends (if any) are not typeable output.
+      if (holdIds.has(key.id) && layer > 0) continue;
       const legend = key.legends[layer];
       if (!legend || [...legend].length !== 1) continue;
       const ch = layer === 0 ? legend.toLowerCase() : legend;
@@ -65,8 +67,8 @@ export function assertUniqueCharMap(keys, layerHold) {
   const seen = new Map();
   const conflicts = [];
   for (const key of keys) {
-    if (holdIds.has(key.id)) continue;
     for (const layer of [0, 1, 2]) {
+      if (holdIds.has(key.id) && layer > 0) continue;
       const legend = key.legends[layer];
       if (!legend || [...legend].length !== 1) continue;
       const ch = layer === 0 ? legend.toLowerCase() : legend;
@@ -128,5 +130,41 @@ export function createLayout({
     charToKey,
     shiftKeysFor,
     assertUniqueCharMap: assertUnique,
+  };
+}
+
+/**
+ * Build a full board object from a declaration (JSON or plain object).
+ * This is the tutor-side consumer API: exporters (e.g. zmk-config gen_board)
+ * emit a declaration; the tutor never reads keymap/repo paths itself.
+ *
+ * Required: id, left, right, layerHold, shiftKeys
+ * Optional: name, productName, formFactor, description, geometry, vilPath,
+ *           comingSoon, homeIds, positions, spaceKeyId, shiftedL0
+ */
+export function boardFromDeclaration(decl) {
+  if (!decl?.id || !decl?.left || !decl?.right || !decl?.layerHold || !decl?.shiftKeys) {
+    throw new Error('board declaration missing required fields (id, left, right, layerHold, shiftKeys)');
+  }
+  const layout = createLayout({
+    left: decl.left,
+    right: decl.right,
+    layerHold: decl.layerHold,
+    shiftKeys: decl.shiftKeys,
+    spaceKeyId: decl.spaceKeyId,
+    shiftedL0: decl.shiftedL0,
+  });
+  return {
+    id: decl.id,
+    name: decl.name ?? decl.id,
+    productName: decl.productName ?? decl.name ?? decl.id,
+    formFactor: decl.formFactor ?? '',
+    description: decl.description ?? '',
+    geometry: decl.geometry ?? decl.id,
+    vilPath: decl.vilPath ?? null,
+    comingSoon: !!decl.comingSoon,
+    homeIds: decl.homeIds ?? [],
+    positions: decl.positions ?? null,
+    ...layout,
   };
 }

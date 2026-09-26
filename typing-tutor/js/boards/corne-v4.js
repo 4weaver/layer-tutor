@@ -51,6 +51,10 @@ export const board = {
   geometry: 'corne-3x6',
   vilPath: 'layouts/corne-v4.vil',
   comingSoon: false,
+  // Home-row bump keys (ASDF / HJKL) for ghost highlight + intro drills.
+  homeIds: ['L11', 'L12', 'L13', 'L14', 'R11', 'R12', 'R13', 'R14'],
+  // No positions map: renderer falls back to legacy Corne stagger/thumb fan.
+  positions: null,
   ...layout,
 };
 
