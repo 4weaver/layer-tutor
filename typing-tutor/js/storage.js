@@ -393,9 +393,14 @@ export function createStorage(stageIds, backing = globalThis.localStorage, opts 
 
     let unlockedNext = false;
     if (!opts.practice && !opts.sandbox && !opts.weakKeys && !opts.customList) {
-      const idx = stageIds.indexOf(stageId);
-      if (accuracy >= PASS_ACCURACY && idx >= 0 && idx + 1 < stageIds.length) {
-        const next = bp.stages[stageIds[idx + 1]];
+      // Prefer board-visible unlock chain when the caller passes unlockStageIds
+      // (eyelash-only stages must not block Corne progression).
+      const chain = Array.isArray(opts.unlockStageIds) && opts.unlockStageIds.length
+        ? opts.unlockStageIds.filter((id) => stageIds.includes(id))
+        : stageIds;
+      const idx = chain.indexOf(stageId);
+      if (accuracy >= PASS_ACCURACY && idx >= 0 && idx + 1 < chain.length) {
+        const next = bp.stages[chain[idx + 1]];
         if (next && !next.unlocked) {
           next.unlocked = true;
           unlockedNext = true;

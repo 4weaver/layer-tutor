@@ -1,7 +1,7 @@
 // App bootstrap and game orchestration.
 
 import {
-  STAGES, buildRound, PASS_ACCURACY,
+  STAGES, buildRound, PASS_ACCURACY, stagesForBoard,
   buildWeakKeyRound, buildCustomRound, contextualTip, coachFromMistakes,
   summarizeRunMetrics, toLinesAtoms,
 } from './lessons.js';
@@ -84,7 +84,8 @@ function goMenu() {
         startStage({ id: '_weak', name: 'Weak keys', layerHint: '', coachTip: '', pool: [], roundSize: 24, track: 'mixed' }, { weakKeys: true });
         return;
       }
-      const suggested = STAGES.find((s) => s.id === focus.stageId);
+      const suggested = stagesForBoard(activeBoard.id).find((s) => s.id === focus.stageId)
+        || STAGES.find((s) => s.id === focus.stageId);
       if (suggested) startStage(suggested, { practice: false });
     },
   });
@@ -316,6 +317,7 @@ function finishStage() {
 
   const isAdhoc = !stage?.id || stage.id.startsWith('_') || runMode === 'weak' || runMode === 'custom';
   const saveId = isAdhoc ? null : stage.id;
+  const boardStages = stagesForBoard(activeBoard.id);
   const { data, fluentNow } = storage.saveResult(
     saveId,
     s.wpm,
@@ -327,16 +329,18 @@ function finishStage() {
       customList: runMode === 'custom',
       boardId: activeBoard.id,
       metrics: runAnalysis,
+      unlockStageIds: boardStages.map((x) => x.id),
     },
   );
   progress = data;
   lastResultStageId = stage.id;
 
-  const realStage = STAGES.find((x) => x.id === stage.id);
-  const idx = realStage ? STAGES.indexOf(realStage) : -1;
+  const realStage = boardStages.find((x) => x.id === stage.id)
+    || STAGES.find((x) => x.id === stage.id);
+  const idx = realStage ? boardStages.indexOf(realStage) : -1;
   const passed = s.accuracy >= PASS_ACCURACY;
-  const hasNext = idx >= 0 && idx + 1 < STAGES.length
-    && progress.stages[STAGES[idx + 1].id]?.unlocked;
+  const hasNext = idx >= 0 && idx + 1 < boardStages.length
+    && progress.stages[boardStages[idx + 1].id]?.unlocked;
   const fluent = realStage ? progress.stages[realStage.id]?.fluent : false;
   const recent = realStage ? (progress.stages[realStage.id]?.recentRuns || []) : [];
 
@@ -614,8 +618,9 @@ document.getElementById('btn-retry').addEventListener('click', () => {
   else startStage(STAGES.find((s) => s.id === stage.id) || stage, { practice });
 });
 document.getElementById('btn-next').addEventListener('click', () => {
-  const idx = STAGES.findIndex((s) => s.id === stage.id);
-  if (idx >= 0 && idx + 1 < STAGES.length) startStage(STAGES[idx + 1], { practice: false });
+  const chain = stagesForBoard(activeBoard.id);
+  const idx = chain.findIndex((s) => s.id === stage.id);
+  if (idx >= 0 && idx + 1 < chain.length) startStage(chain[idx + 1], { practice: false });
 });
 document.getElementById('btn-drill-misses')?.addEventListener('click', () => {
   if (!game?.mistakes) return;

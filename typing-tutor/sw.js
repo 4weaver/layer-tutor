@@ -1,7 +1,7 @@
 // Offline support: network-first with cache fallback, so updates land
 // immediately when online and the app still works with no connection.
 // Bump CACHE when shipping a release so activate() drops the old bucket.
-const CACHE = 'layer-tutor-v15';
+const CACHE = 'layer-tutor-v16';
 const ASSETS = [
   './',
   './index.html',
@@ -20,6 +20,7 @@ const ASSETS = [
   './js/sound.js',
   './js/boards/index.js',
   './js/boards/corne-v4.js',
+  './js/boards/eyelash-sofle.js',
   './js/boards/buildLayout.js',
   './icons/icon.svg',
   './icons/icon-192.png',

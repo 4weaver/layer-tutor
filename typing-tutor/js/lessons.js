@@ -12,9 +12,10 @@ export const PRACTICE_ROUND_MULT = 3;
 export const TRACK_META = {
   base: { title: 'Base layer', order: 0 },
   split: { title: 'Split hands & full base', order: 1 },
-  layer1: { title: 'Layer 1 · Space Nav', order: 2 },
-  layer2: { title: 'Layer 2 · Enter Sym', order: 3 },
-  mixed: { title: 'Mixed mastery', order: 4 },
+  hrm: { title: 'Home-row mods · GASC', order: 2 },
+  layer1: { title: 'Layer 1 · Space Nav', order: 3 },
+  layer2: { title: 'Layer 2 · Enter Sym', order: 4 },
+  mixed: { title: 'Mixed mastery', order: 5 },
 };
 
 /**
@@ -25,8 +26,9 @@ export const TRACK_META = {
  * @property {string} coachTip
  * @property {number} roundSize
  * @property {string[]} pool
- * @property {'base'|'split'|'layer1'|'layer2'|'mixed'} track
+ * @property {'base'|'split'|'hrm'|'layer1'|'layer2'|'mixed'} track
  * @property {boolean} [preferBoard]
+ * @property {string[]} [boardIds]  if set, stage only shown for these board ids
  */
 
 /** @type {Stage[]} */
@@ -94,6 +96,28 @@ export const STAGES = [
     pool: POOLS['all-letters'],
     track: 'split',
   },
+
+  {
+    id: 'home-row-mods',
+    name: 'Home-Row Mods · GASC',
+    layerHint: 'Base · tap letters; hold = mods (GASC)',
+    coachTip: 'Tap A S D F / J K L ; as normal letters. Hold is a mod — GASC pinky→index: left A/S/D/F = GUI/Alt/Shift/Ctrl, mirrored right ;/L/K/J. G and H stay plain. Tap-preferred: roll still types the letter.',
+    roundSize: 20,
+    pool: EXTRA_POOLS['home-row-mods'],
+    track: 'hrm',
+    boardIds: ['eyelash-sofle'],
+  },
+  {
+    id: 'hrm-tap',
+    name: 'HRM Tap Drill',
+    layerHint: 'Base · quick taps on mod keys',
+    coachTip: 'Hammer the home-row mod keys with short taps. If a letter fails to register, you held too long — lighten up. Same GASC map: A GUI · S Alt · D Shift · F Ctrl (mirrored ; L K J).',
+    roundSize: 16,
+    pool: EXTRA_POOLS['hrm-tap'],
+    track: 'hrm',
+    boardIds: ['eyelash-sofle'],
+    wordsPerLine: 3,
+  },
   {
     id: 'numbers',
     name: 'Numbers',
@@ -111,6 +135,17 @@ export const STAGES = [
     roundSize: 14,
     pool: POOLS.navigation,
     track: 'layer1',
+  },
+
+  {
+    id: 'nav-brackets',
+    name: 'Nav Brackets',
+    layerHint: 'Hold Space (Nav) · [] {} () on right hand',
+    coachTip: 'Hold Space for Nav. Brackets sit on the right: N M → [ ], U I → { }, O P → ( ). No Home/End/PgUp/PgDn on this layer — arrows and brackets only.',
+    roundSize: 16,
+    pool: EXTRA_POOLS['nav-brackets'],
+    track: 'layer1',
+    boardIds: ['eyelash-sofle'],
   },
   {
     id: 'hold-drill',
@@ -169,6 +204,11 @@ export const STAGES = [
     track: 'mixed',
   },
 ];
+
+/** Stages visible for a board (omits boardIds-gated stages that do not match). */
+export function stagesForBoard(boardId, stages = STAGES) {
+  return stages.filter((s) => !s.boardIds?.length || s.boardIds.includes(boardId));
+}
 
 export function buildRound(stage, rand = Math.random, count = stage.roundSize) {
   const source = stage.pool?.length ? stage.pool : ['a'];

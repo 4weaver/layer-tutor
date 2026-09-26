@@ -4,6 +4,7 @@ import {
   STAGES, TRACK_META, buildRound, practiceRoundSize, PRACTICE_ROUND_MULT,
   buildWeakKeyRound, contextualTip, coachFromMistakes, todaysFocus,
   summarizeRunMetrics, buildIntroDrill, INTRO_HOME_ORDER, buildKeyDrills, KEY_ROLLS,
+  stagesForBoard,
 } from '../js/lessons.js';
 import { charToKey } from '../js/keyboardLayout.js';
 
@@ -13,7 +14,13 @@ test('curriculum includes bigrams, hold-drill, pulse-drill in order', () => {
   assert.ok(ids.indexOf('bigrams') > ids.indexOf('home-row'));
   assert.ok(ids.includes('hold-drill'));
   assert.ok(ids.includes('pulse-drill'));
-  assert.equal(STAGES.length, 15);
+  assert.ok(ids.includes('home-row-mods'));
+  assert.ok(ids.includes('hrm-tap'));
+  assert.ok(ids.includes('nav-brackets'));
+  assert.ok(ids.indexOf('home-row-mods') > ids.indexOf('all-letters'));
+  assert.ok(ids.indexOf('nav-brackets') > ids.indexOf('navigation'));
+  assert.ok(ids.indexOf('hold-drill') > ids.indexOf('nav-brackets'));
+  assert.equal(STAGES.length, 18);
 });
 
 test('track grouping preserves progressive stage order', () => {
@@ -51,7 +58,8 @@ test('layer usage per stage matches curriculum rules', () => {
   const expected = {
     'home-row': [0], bigrams: [0], 'top-row': [0], 'bottom-row': [0],
     'left-hand': [0], 'right-hand': [0], 'all-letters': [0],
-    numbers: [0], navigation: [1], 'hold-drill': [1],
+    numbers: [0], navigation: [1], 'nav-brackets': [1], 'hold-drill': [1],
+    'home-row-mods': [0], 'hrm-tap': [0],
     'symbol-layer': [0, 1, 2], punctuation: [0, 1, 2],
     'pulse-drill': [0, 1, 2], 'layer-transitions': [0, 1, 2], mixed: [0, 1, 2],
   };
@@ -175,6 +183,62 @@ test('every curated roll word is fully mappable', () => {
     for (const w of roll.split(' ')) {
       assert.ok(w.length >= 3, `roll word too short: ${JSON.stringify(w)}`);
       for (const c of w) assert.ok(charToKey(c), `${JSON.stringify(c)} in roll for ${ch} unmapped`);
+    }
+  }
+});
+
+
+test('eyelash-only HRM/Nav-brackets stages gate on board id', () => {
+  const eye = stagesForBoard('eyelash-sofle').map((s) => s.id);
+  const corne = stagesForBoard('corne-v4').map((s) => s.id);
+  assert.ok(eye.includes('home-row-mods'));
+  assert.ok(eye.includes('hrm-tap'));
+  assert.ok(eye.includes('nav-brackets'));
+  assert.equal(corne.includes('home-row-mods'), false);
+  assert.equal(corne.includes('hrm-tap'), false);
+  assert.equal(corne.includes('nav-brackets'), false);
+  // Shared stages still present for Corne
+  assert.ok(corne.includes('home-row'));
+  assert.ok(corne.includes('navigation'));
+  assert.ok(corne.includes('hold-drill'));
+});
+
+test('home-row-mods coach tip documents GASC pinky→index order', () => {
+  const s = STAGES.find((x) => x.id === 'home-row-mods');
+  assert.match(s.coachTip, /GASC/i);
+  assert.match(s.coachTip, /GUI\/Alt\/Shift\/Ctrl/);
+  assert.match(s.coachTip, /;\/L\/K\/J/);
+});
+
+test('nav stages hold Space (L41), not Lily58 comma', () => {
+  for (const id of ['navigation', 'nav-brackets', 'hold-drill']) {
+    const s = STAGES.find((x) => x.id === id);
+    assert.match(s.layerHint + ' ' + s.coachTip, /Space/i);
+    assert.equal(/comma/i.test(s.layerHint + ' ' + s.coachTip), false, id);
+  }
+});
+
+test('nav-brackets pool is Nav-layer brackets only (no paging glyphs)', () => {
+  const s = STAGES.find((x) => x.id === 'nav-brackets');
+  const allowed = new Set('[]{}()');
+  for (const item of s.pool) {
+    for (const ch of item) {
+      assert.ok(allowed.has(ch), `unexpected ${JSON.stringify(ch)} in ${item}`);
+      assert.equal(charToKey(ch).layer, 1, ch);
+      assert.ok(['R11','R12','R13','R14','R31','R32'].includes(charToKey(ch).keyId), ch);
+    }
+  }
+});
+
+test('hrm stages only use base-layer home/mod letters', () => {
+  const keys = new Set('asdfghjkl; ');
+  for (const id of ['home-row-mods', 'hrm-tap']) {
+    const s = STAGES.find((x) => x.id === id);
+    for (const item of s.pool) {
+      for (const ch of item) {
+        assert.ok(keys.has(ch), `${id}: bad char ${JSON.stringify(ch)} in ${JSON.stringify(item)}`);
+        if (ch !== ' ') assert.equal(charToKey(ch).layer, 0, ch);
+      }
     }
   }
 });

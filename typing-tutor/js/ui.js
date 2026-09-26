@@ -1,6 +1,6 @@
 // Screen rendering. DOM-only; owns no game state.
 
-import { STAGES, TRACK_META, FLUENT_WPM, PASS_ACCURACY, todaysFocus } from './lessons.js';
+import { STAGES, TRACK_META, FLUENT_WPM, PASS_ACCURACY, todaysFocus, stagesForBoard } from './lessons.js';
 import { boardFullLabel, boardLabel } from './boards/index.js';
 import { setAmbientForScreen } from './canvasEffects.js';
 
@@ -80,7 +80,8 @@ export function renderMenu(progress, onSelect, topMisses = [], boardOpts = {}) {
   if (productEl && activeBoard) productEl.textContent = boardFullLabel(activeBoard);
 
   // Today focus + streak
-  const focus = todaysFocus(progress, STAGES);
+  const visibleStages = stagesForBoard(activeBoard?.id, STAGES);
+  const focus = todaysFocus(progress, visibleStages);
   const focusEl = document.getElementById('today-focus');
   if (focusEl) {
     focusEl.hidden = false;
@@ -117,7 +118,7 @@ export function renderMenu(progress, onSelect, topMisses = [], boardOpts = {}) {
   const host = document.getElementById('stage-list');
   host.innerHTML = '';
   const byTrack = new Map();
-  for (const stage of STAGES) {
+  for (const stage of visibleStages) {
     if (!byTrack.has(stage.track)) byTrack.set(stage.track, []);
     byTrack.get(stage.track).push(stage);
   }
@@ -136,7 +137,7 @@ export function renderMenu(progress, onSelect, topMisses = [], boardOpts = {}) {
       const p = progress.stages[stage.id] ?? {
         unlocked: false, bestWpm: 0, bestAccuracy: 0, timesPlayed: 0, fluent: false, recentRuns: [],
       };
-      const globalIndex = STAGES.indexOf(stage);
+      const globalIndex = visibleStages.indexOf(stage);
       const li = document.createElement('li');
       const card = document.createElement(p.unlocked ? 'button' : 'div');
       card.className = 'stage-card' + (p.unlocked ? '' : ' locked');
