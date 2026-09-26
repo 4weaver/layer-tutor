@@ -138,10 +138,33 @@ function normalizeMetricMap(raw, transition = false) {
 /**
  * @param {string[]} stageIds
  * @param {{getItem: Function, setItem: Function}} [backing]
- * @param {{ defaultBoardId?: string }} [opts]
+ * @param {{ defaultBoardId?: string, unlockAfterById?: Record<string, string> }} [opts]
  */
 export function createStorage(stageIds, backing = globalThis.localStorage, opts = {}) {
   const defaultBoardId = opts.defaultBoardId || 'eyelash-sofle';
+  const unlockAfterById = opts.unlockAfterById && typeof opts.unlockAfterById === 'object'
+    ? opts.unlockAfterById
+    : {};
+
+  function stagePassed(s) {
+    return !!s && (Number(s.bestAccuracy) || 0) >= PASS_ACCURACY;
+  }
+
+  /** Propagate unlocks along the linear chain and parallel unlockAfter edges. Never re-locks. */
+  function applyUnlocks(bp, linearOverride) {
+    const linear = (Array.isArray(linearOverride) && linearOverride.length
+      ? linearOverride
+      : stageIds.filter((id) => !unlockAfterById[id])
+    ).filter((id) => bp.stages[id]);
+
+    if (linear.length) bp.stages[linear[0]].unlocked = true;
+    for (let i = 0; i < linear.length - 1; i++) {
+      if (stagePassed(bp.stages[linear[i]])) bp.stages[linear[i + 1]].unlocked = true;
+    }
+    for (const [id, after] of Object.entries(unlockAfterById)) {
+      if (bp.stages[id] && stagePassed(bp.stages[after])) bp.stages[id].unlocked = true;
+    }
+  }
 
   function readRaw() {
     try {
@@ -213,18 +236,14 @@ export function createStorage(stageIds, backing = globalThis.localStorage, opts 
       } catch { /* unavailable backing */ }
     }
 
+    const linearIds = stageIds.filter((id) => !unlockAfterById[id]);
     for (let i = 0; i < stageIds.length; i++) {
       const id = stageIds[i];
-      out.stages[id] = normalizeStage(incoming[id], i === 0);
+      const isFirstLinear = linearIds[0] === id;
+      out.stages[id] = normalizeStage(incoming[id], isFirstLinear);
     }
 
-    let maxUnlocked = 0;
-    stageIds.forEach((id, i) => {
-      const s = out.stages[id];
-      if (s.unlocked || s.timesPlayed > 0 || s.bestAccuracy > 0) maxUnlocked = Math.max(maxUnlocked, i);
-    });
-    for (let i = 0; i <= maxUnlocked; i++) out.stages[stageIds[i]].unlocked = true;
-    if (stageIds.length) out.stages[stageIds[0]].unlocked = true;
+    applyUnlocks(out);
 
     return out;
   }
@@ -370,13 +389,21 @@ export function createStorage(stageIds, backing = globalThis.localStorage, opts 
       },
     ].slice(-20);
 
-    // Ad-hoc runs (weak keys / custom lists): heatmap + streak only.
+    const linear = Array.isArray(opts.unlockStageIds) && opts.unlockStageIds.length
+      ? opts.unlockStageIds.filter((id) => stageIds.includes(id) && !unlockAfterById[id])
+      : stageIds.filter((id) => !unlockAfterById[id]);
+    const isNonProgress = !!(opts.practice || opts.sandbox || opts.weakKeys || opts.customList);
+
+    // Ad-hoc runs (weak keys / custom lists without a real stage): heatmap + streak,
+    // then heal unlocks from stored bestAccuracy.
     if (!stageId || !bp.stages[stageId]) {
+      applyUnlocks(bp, linear);
       write(root);
       return { data: boardView(boardId), unlockedNext: false, fluentNow: false };
     }
 
     const s = bp.stages[stageId];
+    const priorBestAccuracy = Number(s.bestAccuracy) || 0;
     s.timesPlayed += 1;
     s.bestWpm = Math.max(s.bestWpm, wpm);
     s.bestAccuracy = Math.max(s.bestAccuracy, accuracy);
@@ -391,22 +418,23 @@ export function createStorage(stageIds, backing = globalThis.localStorage, opts 
       s.fluent = true;
     }
 
-    let unlockedNext = false;
-    if (!opts.practice && !opts.sandbox && !opts.weakKeys && !opts.customList) {
-      // Prefer board-visible unlock chain when the caller passes unlockStageIds
-      // (eyelash-only stages must not block Corne progression).
-      const chain = Array.isArray(opts.unlockStageIds) && opts.unlockStageIds.length
-        ? opts.unlockStageIds.filter((id) => stageIds.includes(id))
-        : stageIds;
-      const idx = chain.indexOf(stageId);
-      if (accuracy >= PASS_ACCURACY && idx >= 0 && idx + 1 < chain.length) {
-        const next = bp.stages[chain[idx + 1]];
-        if (next && !next.unlocked) {
-          next.unlocked = true;
-          unlockedNext = true;
-        }
-      }
+    const idx = linear.indexOf(stageId);
+    const nextId = idx >= 0 && idx + 1 < linear.length ? linear[idx + 1] : null;
+    const nextWasLocked = !!(nextId && bp.stages[nextId] && !bp.stages[nextId].unlocked);
+
+    // Practice / sandbox / weak / custom: heal from prior bestAccuracy only so a
+    // brand-new pass on this run does not unlock the next stage. Normal runs use
+    // the updated bestAccuracy (current run counts).
+    if (isNonProgress) {
+      const storedBest = s.bestAccuracy;
+      s.bestAccuracy = priorBestAccuracy;
+      applyUnlocks(bp, linear);
+      s.bestAccuracy = storedBest;
+    } else {
+      applyUnlocks(bp, linear);
     }
+
+    const unlockedNext = nextWasLocked && !!bp.stages[nextId]?.unlocked;
 
     write(root);
     return { data: boardView(boardId), unlockedNext, fluentNow };

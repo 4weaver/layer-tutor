@@ -4,7 +4,7 @@ import {
   STAGES, TRACK_META, buildRound, practiceRoundSize, PRACTICE_ROUND_MULT,
   buildWeakKeyRound, contextualTip, coachFromMistakes, todaysFocus,
   summarizeRunMetrics, buildIntroDrill, INTRO_HOME_ORDER, buildKeyDrills, KEY_ROLLS,
-  stagesForBoard,
+  stagesForBoard, unlockChainForBoard,
 } from '../js/lessons.js';
 import { charToKey } from '../js/keyboardLayout.js';
 
@@ -17,10 +17,31 @@ test('curriculum includes bigrams, hold-drill, pulse-drill in order', () => {
   assert.ok(ids.includes('home-row-mods'));
   assert.ok(ids.includes('hrm-tap'));
   assert.ok(ids.includes('nav-brackets'));
-  assert.ok(ids.indexOf('home-row-mods') > ids.indexOf('all-letters'));
+  // Menu/track order may keep HRM after all-letters; unlock gating is via unlockAfter, not array index.
   assert.ok(ids.indexOf('nav-brackets') > ids.indexOf('navigation'));
   assert.ok(ids.indexOf('hold-drill') > ids.indexOf('nav-brackets'));
   assert.equal(STAGES.length, 18);
+});
+
+test('HRM stages use parallel unlockAfter, excluded from linear unlock chain', () => {
+  const hrm = STAGES.find((s) => s.id === 'home-row-mods');
+  const tap = STAGES.find((s) => s.id === 'hrm-tap');
+  assert.equal(hrm.unlockAfter, 'home-row');
+  assert.equal(tap.unlockAfter, 'home-row-mods');
+
+  const chain = unlockChainForBoard('eyelash-sofle').map((s) => s.id);
+  assert.equal(chain.includes('home-row-mods'), false);
+  assert.equal(chain.includes('hrm-tap'), false);
+  assert.ok(chain.includes('home-row'));
+  assert.ok(chain.includes('bottom-row'));
+  assert.ok(chain.includes('left-hand'));
+  assert.ok(chain.includes('all-letters'));
+  assert.equal(chain[chain.indexOf('bottom-row') + 1], 'left-hand');
+
+  // Menu still lists HRM via stagesForBoard
+  const menu = stagesForBoard('eyelash-sofle').map((s) => s.id);
+  assert.ok(menu.includes('home-row-mods'));
+  assert.ok(menu.includes('hrm-tap'));
 });
 
 test('track grouping preserves progressive stage order', () => {
@@ -142,6 +163,25 @@ test('todaysFocus points at unlock or fluent work', () => {
   };
   const f = todaysFocus(progress, stages);
   assert.equal(f.kind, 'unlock');
+});
+
+test('todaysFocus can suggest HRM after home-row while later linear stages stay locked', () => {
+  const stages = [
+    STAGES.find((s) => s.id === 'home-row'),
+    STAGES.find((s) => s.id === 'bigrams'),
+    STAGES.find((s) => s.id === 'home-row-mods'),
+  ];
+  const progress = {
+    stages: {
+      'home-row': { unlocked: true, fluent: true, timesPlayed: 2, bestWpm: 30, bestAccuracy: 95 },
+      bigrams: { unlocked: true, fluent: false, timesPlayed: 0, bestWpm: 0, bestAccuracy: 0 },
+      'home-row-mods': { unlocked: true, fluent: false, timesPlayed: 0, bestWpm: 0, bestAccuracy: 0 },
+    },
+    heatmap: {},
+  };
+  const f = todaysFocus(progress, stages);
+  assert.equal(f.kind, 'parallel');
+  assert.equal(f.stageId, 'home-row-mods');
 });
 
 // ---- Intro key-drill generator ----

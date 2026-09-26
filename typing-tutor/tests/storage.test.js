@@ -46,8 +46,10 @@ test('saveResult updates bests, recentRuns, heatmap, streak', () => {
 
 test('practice and adhoc do not unlock', () => {
   const s = store();
+  // Practice must not report unlockedNext from this run…
   assert.equal(s.saveResult('s1', 50, 99, {}, { practice: true }).unlockedNext, false);
-  assert.equal(s.load().stages.s2.unlocked, false);
+  // …but migrate/load heals from stored bestAccuracy (≥90 → unlock next).
+  assert.equal(s.load().stages.s2.unlocked, true);
   s.saveResult(null, 10, 50, { x: 1 }, { weakKeys: true });
   assert.equal(s.load().heatmap.x, 1);
   assert.equal(s.load().stages.s1.timesPlayed, 1); // only practice run counted
@@ -148,3 +150,72 @@ test('migrates flat v2 and multi-board v3', () => {
   assert.equal(data.stages.s1.bestWpm, 10);
   assert.ok(Array.isArray(data.stages.s1.recentRuns));
 });
+
+test('bottom-row ≥90% unlocks left-hand on linear chain', () => {
+  const ids = ['home-row', 'bigrams', 'top-row', 'bottom-row', 'left-hand', 'right-hand', 'all-letters', 'home-row-mods', 'hrm-tap'];
+  const unlockAfterById = { 'home-row-mods': 'home-row', 'hrm-tap': 'home-row-mods' };
+  const s = createStorage(ids, fakeBacking(), { defaultBoardId: 'eyelash-sofle', unlockAfterById });
+  const linear = ids.filter((id) => !unlockAfterById[id]);
+  // Clear through bottom-row
+  for (const id of ['home-row', 'bigrams', 'top-row', 'bottom-row']) {
+    s.saveResult(id, 30, 95, {}, { unlockStageIds: linear });
+  }
+  const data = s.load();
+  assert.equal(data.stages['left-hand'].unlocked, true);
+  assert.equal(data.stages['home-row-mods'].unlocked, true); // parallel from home-row
+  assert.equal(data.stages['all-letters'].unlocked, false); // not yet — right-hand not passed
+});
+
+test('home-row ≥90% unlocks home-row-mods without unlocking all-letters', () => {
+  const ids = ['home-row', 'bigrams', 'top-row', 'bottom-row', 'left-hand', 'right-hand', 'all-letters', 'home-row-mods', 'hrm-tap'];
+  const unlockAfterById = { 'home-row-mods': 'home-row', 'hrm-tap': 'home-row-mods' };
+  const s = createStorage(ids, fakeBacking(), { defaultBoardId: 'eyelash-sofle', unlockAfterById });
+  const linear = ids.filter((id) => !unlockAfterById[id]);
+  s.saveResult('home-row', 30, 95, {}, { unlockStageIds: linear });
+  const data = s.load();
+  assert.equal(data.stages['home-row-mods'].unlocked, true);
+  assert.equal(data.stages.bigrams.unlocked, true);
+  assert.equal(data.stages['all-letters'].unlocked, false);
+  assert.equal(data.stages['hrm-tap'].unlocked, false); // needs home-row-mods passed
+});
+
+test('migrate heals bottom-cleared + left-locked → left unlocked', () => {
+  const ids = ['home-row', 'bigrams', 'top-row', 'bottom-row', 'left-hand', 'right-hand', 'all-letters', 'home-row-mods', 'hrm-tap'];
+  const unlockAfterById = { 'home-row-mods': 'home-row', 'hrm-tap': 'home-row-mods' };
+  const stale = {
+    version: 4,
+    activeBoardId: 'eyelash-sofle',
+    onboardingDone: true,
+    boards: {
+      'eyelash-sofle': {
+        stages: {
+          'home-row': { unlocked: true, bestWpm: 40, bestAccuracy: 98, timesPlayed: 3 },
+          bigrams: { unlocked: true, bestWpm: 35, bestAccuracy: 96, timesPlayed: 2 },
+          'top-row': { unlocked: true, bestWpm: 32, bestAccuracy: 94, timesPlayed: 2 },
+          'bottom-row': { unlocked: true, bestWpm: 30, bestAccuracy: 92, timesPlayed: 2 },
+          'left-hand': { unlocked: false, bestWpm: 0, bestAccuracy: 0, timesPlayed: 0 },
+          'right-hand': { unlocked: false, bestWpm: 0, bestAccuracy: 0, timesPlayed: 0 },
+          'all-letters': { unlocked: false, bestWpm: 0, bestAccuracy: 0, timesPlayed: 0 },
+          'home-row-mods': { unlocked: false, bestWpm: 0, bestAccuracy: 0, timesPlayed: 0 },
+          'hrm-tap': { unlocked: false, bestWpm: 0, bestAccuracy: 0, timesPlayed: 0 },
+        },
+        heatmap: {},
+        keyMetrics: {},
+        transitionMetrics: {},
+        sessionRuns: [],
+        streak: { lastDate: '', count: 0 },
+        customLists: [],
+        settings: {},
+      },
+    },
+  };
+  const s = createStorage(ids, fakeBacking({ [STORE_KEY]: JSON.stringify(stale) }), {
+    defaultBoardId: 'eyelash-sofle',
+    unlockAfterById,
+  });
+  const data = s.load();
+  assert.equal(data.stages['left-hand'].unlocked, true, 'left-hand healed after bottom passed');
+  assert.equal(data.stages['home-row-mods'].unlocked, true, 'HRM healed after home-row passed');
+  assert.equal(data.stages['all-letters'].unlocked, false);
+});
+

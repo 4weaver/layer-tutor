@@ -29,6 +29,7 @@ export const TRACK_META = {
  * @property {'base'|'split'|'hrm'|'layer1'|'layer2'|'mixed'} track
  * @property {boolean} [preferBoard]
  * @property {string[]} [boardIds]  if set, stage only shown for these board ids
+ * @property {string} [unlockAfter]  parallel unlock: available once this stage id is passed (≥PASS_ACCURACY); omitted from linear chain
  */
 
 /** @type {Stage[]} */
@@ -106,6 +107,7 @@ export const STAGES = [
     pool: EXTRA_POOLS['home-row-mods'],
     track: 'hrm',
     boardIds: ['eyelash-sofle'],
+    unlockAfter: 'home-row',
   },
   {
     id: 'hrm-tap',
@@ -117,6 +119,7 @@ export const STAGES = [
     track: 'hrm',
     boardIds: ['eyelash-sofle'],
     wordsPerLine: 3,
+    unlockAfter: 'home-row-mods',
   },
   {
     id: 'numbers',
@@ -208,6 +211,11 @@ export const STAGES = [
 /** Stages visible for a board (omits boardIds-gated stages that do not match). */
 export function stagesForBoard(boardId, stages = STAGES) {
   return stages.filter((s) => !s.boardIds?.length || s.boardIds.includes(boardId));
+}
+
+/** Linear unlock progression for a board (excludes parallel unlockAfter stages). */
+export function unlockChainForBoard(boardId, stages = STAGES) {
+  return stagesForBoard(boardId, stages).filter((s) => !s.unlockAfter);
 }
 
 export function buildRound(stage, rand = Math.random, count = stage.roundSize) {
@@ -402,14 +410,30 @@ export function coachFromMistakes(mistakes, charToKey) {
 /** Today's focus suggestion from progress. */
 export function todaysFocus(progress, stages = STAGES) {
   const unlocked = stages.filter((s) => progress.stages[s.id]?.unlocked);
-  const nextLocked = stages.find((s) => !progress.stages[s.id]?.unlocked);
+  const linear = stages.filter((s) => !s.unlockAfter);
   const weak = Object.entries(progress.keyMetrics || {})
     .filter(([, m]) => m?.attempts > 0)
     .map(([ch, m]) => [ch, (m.errors / m.attempts) + ((m.samples ? m.totalLatencyMs / m.samples : 0) / 5000)])
     .sort((a, b) => b[1] - a[1])[0]
     || Object.entries(progress.heatmap || {}).sort((a, b) => b[1] - a[1])[0];
+
+  // Parallel branch (e.g. HRM): suggest once unlocked, even while later linear stages stay locked.
+  const parallelFresh = unlocked.find((s) => {
+    if (!s.unlockAfter) return false;
+    const st = progress.stages[s.id];
+    return st && !st.fluent && (st.timesPlayed || 0) === 0;
+  });
+  if (parallelFresh) {
+    return {
+      kind: 'parallel',
+      title: `Try ${parallelFresh.name} — unlocked in parallel`,
+      stageId: parallelFresh.id,
+    };
+  }
+
+  const nextLocked = linear.find((s) => !progress.stages[s.id]?.unlocked);
   if (nextLocked) {
-    const prev = stages[stages.indexOf(nextLocked) - 1];
+    const prev = linear[linear.indexOf(nextLocked) - 1];
     return {
       kind: 'unlock',
       title: `Clear ${prev?.name || 'previous'} to unlock ${nextLocked.name}`,
