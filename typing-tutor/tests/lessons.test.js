@@ -46,11 +46,13 @@ test('buildRound and practiceRoundSize', () => {
 });
 
 test('layer usage per stage matches curriculum rules', () => {
+  // Eyelash Sofle: digits on BASE; Space→Nav (L1); Enter→Sym (L2).
+  // Nav also owns brackets, so symbol/punct pools may touch layer 1.
   const expected = {
     'home-row': [0], bigrams: [0], 'top-row': [0], 'bottom-row': [0],
     'left-hand': [0], 'right-hand': [0], 'all-letters': [0],
-    numbers: [1], navigation: [1], 'hold-drill': [1],
-    'symbol-layer': [0, 2], punctuation: [0, 2],
+    numbers: [0], navigation: [1], 'hold-drill': [1],
+    'symbol-layer': [0, 1, 2], punctuation: [0, 1, 2],
     'pulse-drill': [0, 1, 2], 'layer-transitions': [0, 1, 2], mixed: [0, 1, 2],
   };
   for (const stage of STAGES) {
@@ -86,15 +88,15 @@ test('run analysis reports slow keys and layer transitions', () => {
   const analysis = summarizeRunMetrics({
     keyMetrics: {
       a: { attempts: 1, errors: 0, samples: 1, totalLatencyMs: 200 },
-      '1': { attempts: 1, errors: 0, samples: 1, totalLatencyMs: 600 },
+      '←': { attempts: 1, errors: 0, samples: 1, totalLatencyMs: 600 },
     },
     events: [
       { ch: 'a', previousCh: null, latencyMs: 200 },
-      { ch: '1', previousCh: 'a', latencyMs: 600, errors: 1 },
-      { ch: 'a', previousCh: '1', latencyMs: 300 },
+      { ch: '←', previousCh: 'a', latencyMs: 600, errors: 1 },
+      { ch: 'a', previousCh: '←', latencyMs: 300 },
     ],
   }, charToKey);
-  assert.equal(analysis.slowest[0].ch, '1');
+  assert.equal(analysis.slowest[0].ch, '←');
   assert.equal(analysis.transitionMetrics['enter-layer-1'].count, 1);
   assert.equal(analysis.transitions.find((row) => row.kind === 'enter-layer-1').accuracy, 50);
   assert.equal(analysis.transitionMetrics['exit-layer-1'].count, 1);
@@ -108,14 +110,15 @@ test('editorial filter removes blocked and broken generated content', () => {
 });
 
 test('contextualTip mentions hold for layer chars', () => {
-  assert.match(contextualTip('1', charToKey, 'x'), /left Fn/i);
-  assert.match(contextualTip('!', charToKey, 'x'), /right Fn/i);
+  assert.match(contextualTip('←', charToKey, 'x'), /Space|Nav/i);
+  assert.match(contextualTip('!', charToKey, 'x'), /Enter|Sym/i);
   assert.match(contextualTip('A', charToKey, 'x'), /Shift/i);
   assert.match(contextualTip(' ', charToKey, 'x'), /Space/i);
 });
 
 test('coachFromMistakes returns actionable line', () => {
-  assert.match(coachFromMistakes({ '[': 3 }, charToKey), /layer-2|Symbol/i);
+  assert.match(coachFromMistakes({ '!': 3 }, charToKey), /layer-2|Sym|Symbol/i);
+  assert.match(coachFromMistakes({ '←': 3 }, charToKey), /layer-1|Nav|Hold/i);
   assert.match(coachFromMistakes({}, charToKey), /Clean/i);
 });
 

@@ -141,7 +141,7 @@ function normalizeMetricMap(raw, transition = false) {
  * @param {{ defaultBoardId?: string }} [opts]
  */
 export function createStorage(stageIds, backing = globalThis.localStorage, opts = {}) {
-  const defaultBoardId = opts.defaultBoardId || 'corne-v4';
+  const defaultBoardId = opts.defaultBoardId || 'eyelash-sofle';
 
   function readRaw() {
     try {

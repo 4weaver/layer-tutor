@@ -21,9 +21,14 @@ export const POOLS = {
 const BLOCKED_TERMS = /\b(?:fag|fags|nazi|lsd)\b/i;
 const BROKEN_SENTENCE = /\b(?:can|will)\s+\w+s\b|^Please\s+\w+s\b|^Did\s+.+\s+\w+s\b/i;
 
+// Eyelash Sofle (fork primary) has no = or \ on BASE/NAV/SYM tutor slots
+// (they live on Num hold). Drop items that need them so every stage maps.
+const UNSUPPORTED_ON_PRIMARY = /[=\\]/;
+
 for (const [name, items] of Object.entries(POOLS)) {
   POOLS[name] = [...new Set(items)].filter((item) => (
     !BLOCKED_TERMS.test(item)
+    && !UNSUPPORTED_ON_PRIMARY.test(item)
     && (name !== 'all-letters' || !BROKEN_SENTENCE.test(item))
   ));
 }

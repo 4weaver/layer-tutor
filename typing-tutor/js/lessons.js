@@ -12,8 +12,8 @@ export const PRACTICE_ROUND_MULT = 3;
 export const TRACK_META = {
   base: { title: 'Base layer', order: 0 },
   split: { title: 'Split hands & full base', order: 1 },
-  layer1: { title: 'Layer 1 · left Fn', order: 2 },
-  layer2: { title: 'Layer 2 · right Fn', order: 3 },
+  layer1: { title: 'Layer 1 · Space Nav', order: 2 },
+  layer2: { title: 'Layer 2 · Enter Sym', order: 3 },
   mixed: { title: 'Mixed mastery', order: 4 },
 };
 
@@ -97,8 +97,8 @@ export const STAGES = [
   {
     id: 'numbers',
     name: 'Numbers',
-    layerHint: 'Hold LEFT thumb (Fn) for digits',
-    coachTip: 'Hold amber Fn (left thumb), then press the green digit. Release when the number is done.',
+    layerHint: 'Base number row · no layer hold',
+    coachTip: 'Digits live on the top number row on this board — no thumb hold. Reach up, strike, return home.',
     roundSize: 16,
     pool: POOLS.numbers,
     track: 'layer1',
@@ -106,8 +106,8 @@ export const STAGES = [
   {
     id: 'navigation',
     name: 'Navigation',
-    layerHint: 'Hold LEFT thumb (Fn) · arrows on HJKL',
-    coachTip: 'Still left-Fn. Arrows sit on H J K L — vim-style: H left, J down, K up, L right.',
+    layerHint: 'Hold Space (Nav) · arrows on HJKL',
+    coachTip: 'Hold Space for Nav. Arrows sit on H J K L — vim-style: H left, J down, K up, L right. Brackets live here too.',
     roundSize: 14,
     pool: POOLS.navigation,
     track: 'layer1',
@@ -115,8 +115,8 @@ export const STAGES = [
   {
     id: 'hold-drill',
     name: 'Hold Drill',
-    layerHint: 'Sustain left Fn across a whole token',
-    coachTip: 'Keep the left thumb down for the entire item. Digits and arrows only — no release mid-token.',
+    layerHint: 'Sustain Space (Nav) across a whole token',
+    coachTip: 'Keep Space held for the entire arrow token. No release mid-token — plant the thumb, then move.',
     roundSize: 16,
     pool: EXTRA_POOLS['hold-drill'],
     track: 'layer1',
@@ -125,8 +125,8 @@ export const STAGES = [
   {
     id: 'symbol-layer',
     name: 'Symbol Layer',
-    layerHint: 'Hold RIGHT thumb (Fn) for !@#$%…',
-    coachTip: 'Right thumb holds Fn. These symbols do not need Shift on this board — just hold Fn and press.',
+    layerHint: 'Hold Enter (Sym) for !@#$%…',
+    coachTip: 'Hold Enter for Sym. Symbols sit under the left hand — hold Enter, then press the green key.',
     roundSize: 16,
     pool: POOLS['symbol-layer'],
     track: 'layer2',
@@ -134,8 +134,8 @@ export const STAGES = [
   {
     id: 'punctuation',
     name: 'Brackets & Punctuation',
-    layerHint: 'Hold RIGHT thumb (Fn) · right hand',
-    coachTip: 'Still right-Fn. Brackets, equals, slash and friends live under the right hand on the symbol layer.',
+    layerHint: 'Space Nav brackets · Enter Sym signs · base punctuation',
+    coachTip: 'Brackets []{}() are Space-hold Nav (right hand). Signs like | and # are Enter-hold Sym. Base punctuation needs no hold.',
     roundSize: 16,
     pool: POOLS.punctuation,
     track: 'layer2',
@@ -332,17 +332,17 @@ export function contextualTip(ch, charToKey, stageCoachTip) {
   if (!m) return stageCoachTip || '';
   if (m.layer === 1) {
     if ('←↓↑→'.includes(ch)) {
-      return `Hold left Fn, then ${{ '←': 'H', '↓': 'J', '↑': 'K', '→': 'L' }[ch]} for ${ch}`;
+      return `Hold Space (Nav), then ${{ '←': 'H', '↓': 'J', '↑': 'K', '→': 'L' }[ch]} for ${ch}`;
     }
-    return `Hold left Fn, then the green key for “${ch}”`;
+    return `Hold Space (Nav), then the green key for “${ch}”`;
   }
   if (m.layer === 2) {
-    return `Hold right Fn, then the green key for “${ch}”`;
+    return `Hold Enter (Sym), then the green key for “${ch}”`;
   }
   if (m.shift) {
     return `Hold Shift, then the green key for “${ch}”`;
   }
-  if (ch === ' ') return 'Thumb Space (left inner tall key)';
+  if (ch === ' ') return 'Thumb Space (also the Nav hold — tap, don’t hold, for a space)';
   return stageCoachTip || 'Eyes on the prompt — trust the green key';
 }
 
@@ -352,8 +352,8 @@ export function coachFromMistakes(mistakes, charToKey) {
   if (!entries.length) return 'Clean run. Nudge WPM next — accuracy is locked in.';
   const [ch, n] = entries[0];
   const m = charToKey?.(ch);
-  if (m?.layer === 1) return `Most misses on layer-1 (“${ch}” ×${n}) — try Hold Drill or Numbers practice.`;
-  if (m?.layer === 2) return `Most misses on layer-2 (“${ch}” ×${n}) — try Symbol Layer or Pulse Drill.`;
+  if (m?.layer === 1) return `Most misses on Nav / layer-1 (“${ch}” ×${n}) — try Hold Drill or Navigation.`;
+  if (m?.layer === 2) return `Most misses on Sym / layer-2 (“${ch}” ×${n}) — try Symbol Layer or Pulse Drill.`;
   if (m?.shift) return `Shift + “${ch}” is sticky (×${n}). Slow the shift press; don't bounce.`;
   if (ch === ' ') return `Space timing is off (×${n}). Plant the left thumb; don't stab.`;
   return `Most misses on “${ch}” (×${n}). Use Practice weak keys to overweight it.`;

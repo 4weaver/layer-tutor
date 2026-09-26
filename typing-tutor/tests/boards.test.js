@@ -11,38 +11,47 @@ import {
 import { PRIMARY_BOARD, KEYS, charToKey } from '../js/keyboardLayout.js';
 import { createLayout, boardFromDeclaration } from '../js/boards/buildLayout.js';
 
-test('default / primary board is Corne V4', () => {
-  assert.equal(DEFAULT_BOARD_ID, 'corne-v4');
-  assert.equal(PRIMARY_BOARD.id, 'corne-v4');
-  assert.match(PRIMARY_BOARD.productName, /CORNE V4/i);
-  assert.match(PRIMARY_BOARD.formFactor, /3×6|3x6/i);
-  assert.match(PRIMARY_BOARD.formFactor, /ortho/i);
+test('default / primary board is Eyelash Sofle', () => {
+  assert.equal(DEFAULT_BOARD_ID, 'eyelash-sofle');
+  assert.equal(PRIMARY_BOARD.id, 'eyelash-sofle');
+  assert.match(PRIMARY_BOARD.productName, /Eyelash Sofle/i);
+  assert.match(PRIMARY_BOARD.formFactor, /Sofle|split/i);
+  assert.equal(PRIMARY_BOARD.LAYER_HOLD[1], 'L41'); // Space → Nav
+  assert.equal(PRIMARY_BOARD.LAYER_HOLD[2], 'R40'); // Enter → Sym
 });
 
 test('board labels include product identity for sharing', () => {
-  const b = getBoard('corne-v4');
-  assert.match(boardLabel(b), /Corne V4/);
-  assert.match(boardFullLabel(b), /CORNE V4 Wired Split Mechanical Keyboard/);
-  assert.match(boardFullLabel(b), /40%/);
+  const b = getBoard('eyelash-sofle');
+  assert.match(boardLabel(b), /Eyelash Sofle/);
+  assert.match(boardFullLabel(b), /Eyelash Sofle/);
+  const corne = getBoard('corne-v4');
+  assert.match(boardLabel(corne), /Corne V4/);
+  assert.match(boardFullLabel(corne), /CORNE V4 Wired Split Mechanical Keyboard/);
 });
 
-test('registry has at least the Corne and all playable boards resolve', () => {
-  assert.ok(BOARDS.length >= 1);
+test('registry has Eyelash + Corne and all playable boards resolve', () => {
+  assert.ok(BOARDS.length >= 2);
+  assert.ok(listPlayableBoards().some((b) => b.id === 'eyelash-sofle'));
+  assert.ok(listPlayableBoards().some((b) => b.id === 'corne-v4'));
   assert.ok(listPlayableBoards().every((b) => b.id && b.KEYS?.length));
   assert.equal(getBoard('missing-id').id, DEFAULT_BOARD_ID);
 });
 
-test('keyboardLayout facade matches the Corne board matrix', () => {
+test('keyboardLayout facade matches the Eyelash board matrix', () => {
   assert.equal(KEYS.length, PRIMARY_BOARD.KEYS.length);
   assert.deepEqual(charToKey('a'), PRIMARY_BOARD.charToKey('a'));
-  assert.equal(PRIMARY_BOARD.vilPath, 'layouts/corne-v4.vil');
-  assert.equal(PRIMARY_BOARD.geometry, 'corne-3x6');
+  assert.equal(PRIMARY_BOARD.vilPath, null);
+  assert.equal(PRIMARY_BOARD.geometry, 'eyelash-sofle');
+  assert.ok(PRIMARY_BOARD.positions?.L41);
 });
 
-test('Corne CHAR_MAP is unique and maps hold layers', () => {
+test('Eyelash CHAR_MAP is unique and maps Space/Enter holds', () => {
   assert.equal(PRIMARY_BOARD.assertUniqueCharMap(), true);
-  assert.equal(PRIMARY_BOARD.LAYER_HOLD[1], 'L34');
-  assert.equal(PRIMARY_BOARD.LAYER_HOLD[2], 'R34');
+  assert.equal(PRIMARY_BOARD.LAYER_HOLD[1], 'L41');
+  assert.equal(PRIMARY_BOARD.LAYER_HOLD[2], 'R40');
+  assert.equal(PRIMARY_BOARD.charToKey('1').layer, 0); // base number row
+  assert.equal(PRIMARY_BOARD.charToKey('←').layer, 1);
+  assert.equal(PRIMARY_BOARD.charToKey('!').layer, 2);
 });
 
 test('hold-tap keys still map their base-layer tap legend', () => {

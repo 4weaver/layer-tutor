@@ -1,10 +1,10 @@
 // Compatibility facade over the active/default board.
 // Prefer importing from ./boards/index.js when you need multi-board awareness.
 //
-// Default exports always resolve to the Corne V4 board so existing tests and
-// the layout-check script keep working without a DOM/session.
+// Default exports resolve to the fork primary board (Eyelash Sofle) so curriculum
+// tests and the layout-check script stay aligned with DEFAULT_BOARD_ID.
 
-import { board as corneV4 } from './boards/corne-v4.js';
+import { board as eyelashSofle } from './boards/eyelash-sofle.js';
 import {
   BOARDS,
   DEFAULT_BOARD_ID,
@@ -25,28 +25,28 @@ export {
   boardFullLabel,
 };
 
-/** Currently documented primary board. */
-export const PRIMARY_BOARD = corneV4;
+/** Currently documented primary board for this fork. */
+export const PRIMARY_BOARD = eyelashSofle;
 
-export const KEYS = corneV4.KEYS;
-export const LAYER_HOLD = corneV4.LAYER_HOLD;
-export const SHIFT_KEYS = corneV4.SHIFT_KEYS;
-export const SHIFT_KEY = corneV4.SHIFT_KEY;
+export const KEYS = eyelashSofle.KEYS;
+export const LAYER_HOLD = eyelashSofle.LAYER_HOLD;
+export const SHIFT_KEYS = eyelashSofle.SHIFT_KEYS;
+export const SHIFT_KEY = eyelashSofle.SHIFT_KEY;
 
 export function charToKey(ch) {
-  return corneV4.charToKey(ch);
+  return eyelashSofle.charToKey(ch);
 }
 
 export function shiftKeysFor(target) {
-  return corneV4.shiftKeysFor(target);
+  return eyelashSofle.shiftKeysFor(target);
 }
 
 export function assertUniqueCharMap() {
-  return corneV4.assertUniqueCharMap();
+  return eyelashSofle.assertUniqueCharMap();
 }
 
 export function layoutSnapshot() {
-  return corneV4.KEYS.map((k) => ({
+  return eyelashSofle.KEYS.map((k) => ({
     id: k.id,
     half: k.half,
     row: k.row,
