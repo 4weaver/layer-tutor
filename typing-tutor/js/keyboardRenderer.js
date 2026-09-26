@@ -361,6 +361,20 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
         }
       }
     }
+
+    // Home-row mod holds (GASC): amber hold styling + badge, same as layer holds.
+    const modHolds = target.modHolds || [];
+    const modBadge = { L21: 'GUI', L22: 'ALT', L23: 'SHIFT', L24: 'CTRL',
+                       R24: 'GUI', R23: 'ALT', R22: 'SHIFT', R21: 'CTRL' };
+    for (const id of modHolds) {
+      const holdEl = keyEls.get(id);
+      if (!holdEl) continue;
+      holdEl.classList.add('kb-hold');
+      holdEl.closest('.kb-half')?.classList.add('kb-needed-half');
+      const badge = holdEl.querySelector('.kb-badge');
+      badge.hidden = false;
+      badge.textContent = `HOLD ${modBadge[id] || 'MOD'}`;
+    }
   }
 
   paintBaseLegends();

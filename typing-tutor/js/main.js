@@ -9,8 +9,12 @@ import {
   getBoard, listPlayableBoards, DEFAULT_BOARD_ID, boardFullLabel,
 } from './boards/index.js';
 import {
-  createGame, currentItem, currentChar, handleKey, stats, progressCounts, isLineArmed, advanceLine, countArmedMistake,
+  createGame, currentItem, currentChar, handleKey, handleChord, stats, progressCounts, isLineArmed, advanceLine, countArmedMistake,
 } from './gameEngine.js';
+import {
+  parseChord, isChordToken, eventMatchesChord, isBareModifierEvent,
+  chordHighlightTarget, packChordLines,
+} from './chords.js';
 import { createStorage } from './storage.js';
 import { renderKeyboard, renderHeatmapBoard } from './keyboardRenderer.js';
 import * as sound from './sound.js';
@@ -135,7 +139,7 @@ function wireSettings() {
 
 function applyBoardChrome(target) {
   const s = settings();
-  const needsHold = !!(target && (target.layer > 0 || target.shift));
+  const needsHold = !!(target && (target.layer > 0 || target.shift || (target.modHolds && target.modHolds.length)));
   kb?.setHomeGhost(s.showHomeGhost);
   const collapsed = boardUserCollapsed || s.boardCollapsed;
   if (s.focusMode) {
@@ -229,9 +233,17 @@ function startStage(s, opts = {}) {
 
   // B-mode (uniform X): pack tokens into short LINES (words spaced, Enter after each)
   // and enable explicit line-advance. Stage.wordsPerLine overrides the default 4.
-  const lines = toLinesAtoms(items, stage.wordsPerLine ?? 4);
-  const effectiveItems = lines.length ? lines : (['a']);
-  game = createGame(effectiveItems, now(), { lineGate: true });
+  // Chord stages: each pool item is one combo; pack into lines of chord tokens.
+  const chordMode = stage.input === 'chords';
+  let effectiveItems;
+  if (chordMode) {
+    const packed = packChordLines(items, stage.wordsPerLine ?? 4);
+    effectiveItems = packed.length ? packed : [['Ctrl+c']];
+  } else {
+    const lines = toLinesAtoms(items, stage.wordsPerLine ?? 4);
+    effectiveItems = lines.length ? lines : (['a']);
+  }
+  game = createGame(effectiveItems, now(), { lineGate: true, chordMode });
   document.getElementById('game-stage-name').textContent =
     runMode === 'practice' ? `${stage.name} · practice` : stage.name;
   document.getElementById('layer-hint').textContent = stage.layerHint;
@@ -251,13 +263,29 @@ function refresh() {
   const item = currentItem(game);
   if (item == null) return;
   const armed = isLineArmed(game);
-  ui.renderPrompt(item, game.cursor, armed);
+  const chordMode = !!game.chordMode;
+  ui.renderPrompt(item, game.cursor, armed, { chordMode });
   const ch = currentChar(game);
-  const target = armed ? null : activeBoard.charToKey(ch);
+  let target = null;
+  if (!armed && ch != null) {
+    if (chordMode && isChordToken(ch)) {
+      try { target = chordHighlightTarget(activeBoard, parseChord(ch)); }
+      catch { target = null; }
+    } else {
+      target = activeBoard.charToKey(ch);
+    }
+  }
   kb?.highlightTarget(target);
   applyBoardChrome(target);
   if (armed) {
     ui.setContextTip('Line done — press Enter (⏎) for the next line.');
+  } else if (chordMode && ch && isChordToken(ch)) {
+    try {
+      const chord = parseChord(ch);
+      ui.setContextTip(`Hold ${[...chord.mods].map((m) => ({ ctrl: 'Ctrl', alt: 'Alt', gui: 'GUI', shift: 'Shift' }[m])).join('+')} (HRM), then tap ${chord.key.toUpperCase()}`);
+    } catch {
+      ui.setContextTip(stage?.coachTip || '');
+    }
   } else {
     ui.setContextTip(contextualTip(ch, (c) => activeBoard.charToKey(c), stage?.coachTip));
   }
@@ -518,6 +546,10 @@ function isOnboardScreen() {
 const ESC_DOUBLE_TAP_MS = 400;
 let lastEscAt = 0;
 
+function expectingChordInput() {
+  return !!(game && !game.done && game.chordMode && stage?.input === 'chords' && isGameScreen());
+}
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && isGameScreen() && game && !game.done) {
     e.preventDefault();
@@ -534,7 +566,10 @@ document.addEventListener('keydown', (e) => {
   }
   if (paused) return;
   if (e.repeat) return;
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const chordExpect = expectingChordInput();
+  // Drop browser/OS shortcuts only when we are NOT drilling real mod combos.
+  if ((e.ctrlKey || e.metaKey || e.altKey) && !chordExpect) return;
 
   // B-mode: a completed line waits on an explicit Enter to advance to the next line.
   if (game && isLineArmed(game) && isGameScreen()) {
@@ -548,6 +583,15 @@ document.addEventListener('keydown', (e) => {
       return;
     }
     // Wrong key while Enter is due: do NOT silently forgive (confirmed UX).
+    if (chordExpect) {
+      if (!isBareModifierEvent(e)) {
+        countArmedMistake(game);
+        sound.playError();
+        ui.flashEnter();
+        ui.setContextTip('Line done — press Enter (⏎) to continue.');
+      }
+      return;
+    }
     const ch2 = keyToChar(e);
     if (ch2 != null) {
       countArmedMistake(game);
@@ -557,6 +601,44 @@ document.addEventListener('keydown', (e) => {
     }
     return;
   }
+
+  // ---- Chord combo stages (HRM hold → OS modifier + letter) ----
+  if (chordExpect) {
+    if (isEditableControl(e.target)) return;
+    // Wait for the non-mod key of the combo; bare Control/Alt/Meta/Shift do nothing.
+    if (isBareModifierEvent(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    ui.focusTypingSurface();
+
+    const token = currentChar(game);
+    let chord = null;
+    try { chord = token && isChordToken(token) ? parseChord(token) : null; }
+    catch { chord = null; }
+    const ok = !!(chord && eventMatchesChord(e, chord));
+    const result = handleChord(game, ok, now());
+    if (result === 'error') {
+      sound.playError();
+      ui.flashError();
+      const wrongCh = keyToChar(e);
+      if (wrongCh) kb?.flashWrong(wrongCh, (c) => activeBoard.charToKey(c));
+      ui.renderLiveStats(stats(game, now()), `${game.itemIndex + 1}/${game.items.length}`, stage?._wpmGoal || 0);
+      return;
+    }
+    if (result === 'ignored' || result === 'awaiting-advance') return;
+    if (chord) {
+      const ht = chordHighlightTarget(activeBoard, chord);
+      if (ht) signalFromKey(kb?.getKeyRect(ht.keyId), 0);
+    }
+    if (result === 'done') {
+      finishStage();
+      return;
+    }
+    sound.playCorrect();
+    refresh();
+    return;
+  }
+
   const ch = keyToChar(e);
   if (ch === null) return;
 
@@ -664,7 +746,15 @@ document.getElementById('btn-sandbox-load')?.addEventListener('click', () => {
 
 document.getElementById('btn-toggle-board')?.addEventListener('click', () => {
   boardUserCollapsed = !boardUserCollapsed;
-  const t = game ? activeBoard.charToKey(currentChar(game)) : null;
+  let t = null;
+  if (game) {
+    const ch = currentChar(game);
+    if (game.chordMode && ch && isChordToken(ch)) {
+      try { t = chordHighlightTarget(activeBoard, parseChord(ch)); } catch { t = null; }
+    } else if (ch != null) {
+      t = activeBoard.charToKey(ch);
+    }
+  }
   applyBoardChrome(t);
   document.getElementById('btn-toggle-board').setAttribute('aria-pressed', boardUserCollapsed ? 'true' : 'false');
 });

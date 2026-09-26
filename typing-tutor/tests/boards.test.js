@@ -93,3 +93,15 @@ test('boardFromDeclaration builds a registerable board from JSON-shaped decl', (
   assert.equal(board.positions.L00.x, 0);
   assert.equal(board.assertUniqueCharMap(), true);
 });
+
+test('eyelash exposes GASC homeRowMods; corne omits combo map', () => {
+  const eye = getBoard('eyelash-sofle');
+  assert.deepEqual(eye.homeRowMods, {
+    gui: ['L21', 'R24'],
+    alt: ['L22', 'R23'],
+    shift: ['L23', 'R22'],
+    ctrl: ['L24', 'R21'],
+  });
+  const corne = getBoard('corne-v4');
+  assert.ok(!corne.homeRowMods || !corne.homeRowMods.ctrl?.length);
+});

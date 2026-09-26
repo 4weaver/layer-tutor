@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, currentItem, currentChar, handleKey, stats, isLineArmed, advanceLine, countArmedMistake } from '../js/gameEngine.js';
+import { createGame, currentItem, currentChar, handleKey, handleChord, stats, isLineArmed, advanceLine, countArmedMistake } from '../js/gameEngine.js';
 
 test('typing correct chars advances cursor, then items', () => {
   const g = createGame(['ab', 'c']);
@@ -136,4 +136,24 @@ test('countArmedMistake records an error when typing the wrong key while armed',
   // not armed anymore after advance -> no-op
   advanceLine(g);
   assert.equal(countArmedMistake(g), false);
+});
+
+test('chordMode treats each token as one unit and advances items', () => {
+  const g = createGame([['Ctrl+c', 'Ctrl+v'], ['Alt+f']], null, { lineGate: true, chordMode: true });
+  assert.equal(currentChar(g), 'Ctrl+c');
+  assert.equal(handleChord(g, true, 0), 'correct');
+  assert.equal(currentChar(g), 'Ctrl+v');
+  assert.equal(handleChord(g, true, 100), 'line-done');
+  assert.equal(isLineArmed(g), true);
+  assert.equal(advanceLine(g), 'next');
+  assert.equal(currentChar(g), 'Alt+f');
+  assert.equal(handleChord(g, false, 200), 'error');
+  assert.equal(g.errors, 1);
+  assert.equal(handleChord(g, true, 300), 'line-complete-last');
+});
+
+test('handleKey is ignored in chordMode', () => {
+  const g = createGame(['Ctrl+c'], null, { chordMode: true });
+  assert.equal(handleKey(g, 'c', 0), 'ignored');
+  assert.equal(g.correct, 0);
 });

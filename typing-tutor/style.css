@@ -316,6 +316,20 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0, 229, 25
 .ch.enter-armed { opacity: 1; color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { border-color: transparent; } }
 .ch.error-flash { animation: shake 0.25s ease; color: var(--error); }
+.ch.chord {
+  display: inline-block;
+  padding: 0 0.2em;
+  margin: 0 0.08em;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  font-size: 0.85em;
+}
+.ch.current.chord {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-bottom: 3px solid var(--accent);
+}
+.ch.chord-gap { width: 0.35em; display: inline-block; }
+
 @keyframes shake {
   25% { transform: translateX(-3px); }
   75% { transform: translateX(3px); }

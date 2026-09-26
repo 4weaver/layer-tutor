@@ -4,21 +4,18 @@ export const EXTRA_POOLS = {
   'hold-drill': ["←←", "→→", "↑↑", "↓↓", "←→", "→←", "↑↓", "↓↑", "←↓↑→", "→↑↓←", "←←→→", "↑↑↓↓", "←→←→", "↑↓↑↓", "←←←", "→→→", "↑↑↑", "↓↓↓", "←↓←↓", "→↑→↑", "↑→↑→", "↓←↓←", "←↑←↑", "→↓→↓", "↑←↑←", "↓→↓→", "←→↑↓", "→←↓↑", "↑↓←→", "↓↑→←", "←↓→↑", "→↑←↓", "↑→↓←", "↓←↑→", "←←↓↓", "→→↑↑", "↑↑←←", "↓↓→→", "←→→←", "↑↓↓↑", "→←←→", "↓↑↑↓", "←↑→↓←↑→↓", "→↓←↑→↓←↑", "↑→↓←↑→↓←", "↓←↑→↓←↑→", "←←↑↑→→↓↓", "→→↓↓←←↑↑", "↑↑→→↓↓←←", "↓↓←←↑↑→→", "←↓↑→←↓↑→", "→↑↓←→↑↓←", "↑←↓→↑←↓→", "↓→↑←↓→↑←"],
   'pulse-drill': ["a1","b2","c3","x9","y0","n1","m2","a1b","x2y","a=1","b=2","x=3","n=0","i=1","a[0]","b[1]","x[2]","a1a","b2b","1a1","2b2","x!","y!","ok!","go!","a$","b$","#1","#2","@a","@b","a&b","x*y","a-b","x=y","a_b","c|d","~a","a+b","[a]","{x}","`a`","a\\b","v1","v2","v1.0","v2.1","a1 a2","x9 y0","n=1;","i=0;","a[1]=2","x!=y","a&1","b|2","$5","10%","#9","@x","let x=1","var n=2","id=7","a+1","b-2","c*3","d/4","x^2","n%2","a_1","b-2","c.3","hi!","no!","yes!","ok.","a,b","x.y","1st","2nd","3rd","q1","q2","fy24","v3.14"],
 
-  // Eyelash Sofle: tap-preferred GASC home-row mods (A/S/D/F = GUI/Alt/Shift/Ctrl;
-  // mirrored ;/L/K/J). Teach TAP letters — hold awareness is coach-tip only.
+  // Eyelash Sofle: real GASC home-row mod COMBOS (hold HRM → OS sends Ctrl/Alt/GUI/Shift).
+  // Avoid browser/OS focus-stealers (Alt+Tab, Ctrl+W/T/N, Meta+W, …). Editing combos only.
   'home-row-mods': [
-    "as","ad","af","sa","sd","sf","da","ds","df","fa","fs","fd",
-    "jk","jl","j;","kj","kl","k;","lj","lk","l;","aj","sj","dj",
-    "ask","sad","lad","fad","all","dad","add","ads","fall","flask",
-    "salad","lass","asks","adds","alas","skald","shall","slash",
-    "asdf","jkl;","asdfj","jkl;a","fds a",";lkj","asdf;","jkl;f",
-    "as df","jk l;","a s d f","j k l ;","asdf jkl;","jkl; asdf",
-    "ask ask","dad dad","all fall","sad lad","flask salad",
-    "lass asks","adds alas","skald shall","slash asdf","jkl; fall",
-    "fa la","ja ka","sa la","da fa","ja la","ka la","as ja","df jk",
-    "al;","a;","s;","d;","f;","j;","k;","l;",";;",";;;",
-    "asa","sds","dfd","faf","jkj","klk","l;l",";j;",
-    "asdfasdf","jkl;jkl;","asdfjkl;",";lkjfdsa","afsd",";jkl",
+    "Ctrl+c","Ctrl+v","Ctrl+x","Ctrl+z","Ctrl+a","Ctrl+s","Ctrl+f","Ctrl+b","Ctrl+y",
+    "GUI+c","GUI+v","GUI+x","GUI+z","GUI+a","GUI+s","GUI+f",
+    "Alt+f","Alt+b","Alt+s","Alt+d","Alt+v","Alt+x","Alt+z","Alt+c","Alt+a",
+    "Shift+a","Shift+s","Shift+d","Shift+f","Shift+g","Shift+h","Shift+j","Shift+k","Shift+l","Shift+z","Shift+x","Shift+c","Shift+v",
+    "Ctrl+Shift+c","Ctrl+Shift+v","Ctrl+Shift+z","Ctrl+Shift+a","Ctrl+Shift+s","Ctrl+Shift+f",
+    "GUI+Shift+c","GUI+Shift+v","GUI+Shift+z","GUI+Shift+s",
+    "Alt+Shift+f","Alt+Shift+b","Alt+Shift+s",
+    "Ctrl+c","Ctrl+v","Ctrl+x","Ctrl+z","Ctrl+a","Ctrl+s",
+    "GUI+c","GUI+v","Alt+f","Alt+b","Shift+a","Shift+z",
   ],
   // High-repetition tap drills for mod keys (intro-sandwich + rolls).
   'hrm-tap': [

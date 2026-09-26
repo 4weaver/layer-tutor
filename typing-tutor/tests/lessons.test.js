@@ -7,6 +7,7 @@ import {
   stagesForBoard, unlockChainForBoard,
 } from '../js/lessons.js';
 import { charToKey } from '../js/keyboardLayout.js';
+import { isChordToken, parseChord } from '../js/chords.js';
 
 test('curriculum includes bigrams, hold-drill, pulse-drill in order', () => {
   const ids = STAGES.map((s) => s.id);
@@ -51,6 +52,14 @@ test('track grouping preserves progressive stage order', () => {
 
 test('every stage item uses only mappable characters', () => {
   for (const stage of STAGES) {
+    if (stage.input === 'chords') {
+      for (const item of stage.pool) {
+        assert.ok(isChordToken(item), `${stage.id}: not a chord token ${JSON.stringify(item)}`);
+        const { key } = parseChord(item);
+        assert.ok(charToKey(key), `${stage.id}: chord key ${key} unmapped in ${item}`);
+      }
+      continue;
+    }
     for (const item of stage.pool) {
       for (const ch of item) {
         assert.ok(charToKey(ch), `stage ${stage.id}: no key mapping for ${JSON.stringify(ch)} in ${JSON.stringify(item)}`);
@@ -87,6 +96,10 @@ test('layer usage per stage matches curriculum rules', () => {
   for (const stage of STAGES) {
     const layers = new Set();
     for (const item of stage.pool) {
+      if (stage.input === 'chords') {
+        layers.add(charToKey(parseChord(item).key).layer);
+        continue;
+      }
       for (const ch of item) layers.add(charToKey(ch).layer);
     }
     assert.deepEqual([...layers].sort((a, b) => a - b), expected[stage.id], stage.id);
@@ -245,9 +258,12 @@ test('eyelash-only HRM/Nav-brackets stages gate on board id', () => {
 
 test('home-row-mods coach tip documents GASC pinky→index order', () => {
   const s = STAGES.find((x) => x.id === 'home-row-mods');
+  assert.equal(s.input, 'chords');
+  assert.match(s.name, /HRM Combos|Home-Row Mods/i);
   assert.match(s.coachTip, /GASC/i);
   assert.match(s.coachTip, /GUI\/Alt\/Shift\/Ctrl/);
   assert.match(s.coachTip, /;\/L\/K\/J/);
+  assert.match(s.layerHint, /Hold home-row mod|GASC/i);
 });
 
 test('nav stages hold Space (L41), not Lily58 comma', () => {
@@ -270,15 +286,32 @@ test('nav-brackets pool is Nav-layer brackets only (no paging glyphs)', () => {
   }
 });
 
-test('hrm stages only use base-layer home/mod letters', () => {
+test('hrm-tap only uses base-layer home/mod letters', () => {
   const keys = new Set('asdfghjkl; ');
-  for (const id of ['home-row-mods', 'hrm-tap']) {
-    const s = STAGES.find((x) => x.id === id);
-    for (const item of s.pool) {
-      for (const ch of item) {
-        assert.ok(keys.has(ch), `${id}: bad char ${JSON.stringify(ch)} in ${JSON.stringify(item)}`);
-        if (ch !== ' ') assert.equal(charToKey(ch).layer, 0, ch);
-      }
+  const s = STAGES.find((x) => x.id === 'hrm-tap');
+  assert.notEqual(s.input, 'chords');
+  for (const item of s.pool) {
+    for (const ch of item) {
+      assert.ok(keys.has(ch), `hrm-tap: bad char ${JSON.stringify(ch)} in ${JSON.stringify(item)}`);
+      if (ch !== ' ') assert.equal(charToKey(ch).layer, 0, ch);
     }
+  }
+});
+
+test('home-row-mods pool items are safe editable chords covering GASC', () => {
+  const s = STAGES.find((x) => x.id === 'home-row-mods');
+  assert.equal(s.input, 'chords');
+  assert.equal(s.unlockAfter, 'home-row');
+  const modsSeen = new Set();
+  const banned = /^(Alt\+Tab|Ctrl\+[wtn]|Ctrl\+Shift\+[tw]|GUI\+[wtn]|Meta\+)/i;
+  for (const item of s.pool) {
+    assert.ok(isChordToken(item), item);
+    assert.equal(banned.test(item), false, `dangerous chord ${item}`);
+    const { mods, key } = parseChord(item);
+    for (const m of mods) modsSeen.add(m);
+    assert.equal(charToKey(key).layer, 0, key);
+  }
+  for (const m of ['ctrl', 'alt', 'gui', 'shift']) {
+    assert.ok(modsSeen.has(m), `missing mod ${m}`);
   }
 });

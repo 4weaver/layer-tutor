@@ -140,7 +140,7 @@ export function createLayout({
  *
  * Required: id, left, right, layerHold, shiftKeys
  * Optional: name, productName, formFactor, description, geometry, vilPath,
- *           comingSoon, homeIds, positions, spaceKeyId, shiftedL0
+ *           comingSoon, homeIds, positions, homeRowMods, spaceKeyId, shiftedL0
  */
 export function boardFromDeclaration(decl) {
   if (!decl?.id || !decl?.left || !decl?.right || !decl?.layerHold || !decl?.shiftKeys) {
@@ -165,6 +165,7 @@ export function boardFromDeclaration(decl) {
     comingSoon: !!decl.comingSoon,
     homeIds: decl.homeIds ?? [],
     positions: decl.positions ?? null,
+    homeRowMods: decl.homeRowMods ?? {},
     ...layout,
   };
 }

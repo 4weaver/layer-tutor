@@ -100,14 +100,16 @@ export const STAGES = [
 
   {
     id: 'home-row-mods',
-    name: 'Home-Row Mods · GASC',
-    layerHint: 'Base · tap letters; hold = mods (GASC)',
-    coachTip: 'Tap A S D F / J K L ; as normal letters. Hold is a mod — GASC pinky→index: left A/S/D/F = GUI/Alt/Shift/Ctrl, mirrored right ;/L/K/J. G and H stay plain. Tap-preferred: roll still types the letter.',
-    roundSize: 20,
+    name: 'HRM Combos · GASC',
+    layerHint: 'Hold home-row mod (GASC), then tap letter',
+    coachTip: 'Hold the HRM key for the mod, then tap the letter — the browser sees Ctrl/Alt/GUI/Shift + key. GASC pinky→index: left A/S/D/F = GUI/Alt/Shift/Ctrl, mirrored right ;/L/K/J. G and H stay plain. Tap-preferred: a quick tap still types the letter (see HRM Tap Drill).',
+    roundSize: 16,
     pool: EXTRA_POOLS['home-row-mods'],
     track: 'hrm',
     boardIds: ['eyelash-sofle'],
     unlockAfter: 'home-row',
+    input: 'chords',
+    wordsPerLine: 4,
   },
   {
     id: 'hrm-tap',

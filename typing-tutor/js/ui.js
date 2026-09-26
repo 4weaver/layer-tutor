@@ -1,6 +1,7 @@
 // Screen rendering. DOM-only; owns no game state.
 
 import { STAGES, TRACK_META, FLUENT_WPM, PASS_ACCURACY, todaysFocus, stagesForBoard } from './lessons.js';
+import { parseChord, isChordToken } from './chords.js';
 import { boardFullLabel, boardLabel } from './boards/index.js';
 import { setAmbientForScreen } from './canvasEffects.js';
 
@@ -245,10 +246,44 @@ function sparkline(values) {
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline fill="none" stroke="currentColor" stroke-width="1.5" points="${pts}"/></svg>`;
 }
 
-export function renderPrompt(item, cursor, armed = false) {
+export function renderPrompt(item, cursor, armed = false, { chordMode = false } = {}) {
   const el = document.getElementById('prompt');
   if (!el) return;
   el.innerHTML = '';
+
+  const appendEnter = () => {
+    const trail = document.createElement('span');
+    trail.className = armed ? 'ch enter enter-armed' : 'ch enter';
+    trail.textContent = '⏎';
+    trail.setAttribute('aria-hidden', 'true');
+    el.appendChild(trail);
+  };
+
+  // Chord mode: each pool token (or each entry in a line array) is one unit.
+  if (chordMode) {
+    const tokens = Array.isArray(item) ? item : [item];
+    const labels = tokens.map((tok) => {
+      try { return isChordToken(tok) ? parseChord(tok).label : String(tok); }
+      catch { return String(tok); }
+    });
+    el.setAttribute('aria-label', `Type: ${labels.join(' ')}`);
+    labels.forEach((label, i) => {
+      if (i > 0) {
+        const gap = document.createElement('span');
+        gap.className = 'ch chord-gap';
+        gap.textContent = ' ';
+        gap.setAttribute('aria-hidden', 'true');
+        el.appendChild(gap);
+      }
+      const span = document.createElement('span');
+      span.textContent = label;
+      span.className = i < cursor ? 'ch typed chord' : i === cursor ? 'ch current chord' : 'ch pending chord';
+      el.appendChild(span);
+    });
+    appendEnter();
+    return;
+  }
+
   el.setAttribute('aria-label', `Type: ${item}`);
   // Render each char as a span. A space char shows as '·' (even inside a line),
   // i.e. real spaces between words are typed keys — matches the B-mode engine.
@@ -262,11 +297,7 @@ export function renderPrompt(item, cursor, armed = false) {
   // Persistent end-of-line Enter affordance: faint while the line is incomplete,
   // lit when the line is done and awaiting the Enter key. Always present so the
   // line break never 'suddenly appears' at the last char (confirmed UX).
-  const trail = document.createElement('span');
-  trail.className = armed ? 'ch enter enter-armed' : 'ch enter';
-  trail.textContent = '⏎';
-  trail.setAttribute('aria-hidden', 'true');
-  el.appendChild(trail);
+  appendEnter();
 }
 
 export function flashError() {
